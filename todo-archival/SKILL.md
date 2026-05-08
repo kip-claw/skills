@@ -1,8 +1,6 @@
 ---
 name: todo-archival
-description: >
-  Archive completed items from Todo.md to keep the main list tidy. Moves done items to Archive/Done-Items.md. Use when: running the nightly archival
-  task, when the done section gets too long, when organizing completed work.
+description: Archives completed Todo.md items into Archive/Done-Items.md to keep the active task list clean.
 ---
 
 # Todo Archival

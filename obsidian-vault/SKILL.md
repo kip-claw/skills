@@ -1,9 +1,6 @@
 ---
 name: obsidian-vault
-description: >
-  Work with the Obsidian vault as a knowledge base. Read, create, edit, and search notes
-  using native file tools. Use when: querying the knowledge base, saving notes, editing
-  existing notes by user instructions.
+description: Works with the Obsidian vault knowledge base to read, create, edit, and search notes.
 ---
 
 # Obsidian Knowledge Base

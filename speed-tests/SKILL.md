@@ -1,11 +1,6 @@
-# Speed Test Skill
-
 ---
 name: speed-test
-description: >
-  Runs an internet speed test and logs the results to Google Sheets. Use when
-  the user asks Kip to run a speed test, check internet speed, or test the
-  connection. Also used by the scheduled morning and evening speed test cron jobs.
+description: Runs an internet speed test, logs to Google Sheets, and updates kip-claw speedTests.json for public stats.
 ---
 
 # Internet Speed Test

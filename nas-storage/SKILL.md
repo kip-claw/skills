@@ -1,10 +1,6 @@
 ---
 name: nas-storage
-description: >
-  Manages files and storage on the household NAS. Use when the user asks
-  about disk space, wants to store or retrieve files, requests a backup,
-  or asks about drive health. Also use for scheduled storage tasks like
-  weekly disk reports or archiving old files.
+description: Manages NAS storage, file transfers, disk usage checks, drive health, and Google Drive sync operations.
 ---
 
 # NAS Storage

@@ -1,11 +1,6 @@
 ---
 name: music-import
-description: >
-  Helps the user import new music albums (mostly Bandcamp downloads) into the
-  beets library on the NAS. Use when the user mentions buying or downloading
-  albums, importing music, processing new tracks, or asks to "stage" or
-  "process the music in staging". Also use when the user has just finished a
-  manual beets import and wants Kip to clean up and trigger a Kodi rescan.
+description: Imports new albums into the NAS beets library and guides staging, duplicate checks, cleanup, and Kodi rescan.
 ---
 
 # Music Import

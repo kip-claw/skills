@@ -1,9 +1,6 @@
 ---
 name: tv-control
-description: >
-  Controls the TV, sound system, and Kodi media center. Use when the user
-  asks Kip to play music, play a video, show photos, make an announcement
-  through the speakers, turn the TV on or off, or control playback.
+description: Controls TV, Yamaha receiver, and Kodi playback for music, video, photos, announcements, and power actions.
 ---
 
 # TV and Media Control

@@ -1,10 +1,6 @@
 ---
 name: voice-transcribe
-description: >
-  Transcribes Telegram voice messages locally using whisper.cpp.
-  Use when the user sends a voice message or audio note. Download
-  the voice file, run transcription, and treat the resulting text
-  as the user's message.
+description: Transcribes Telegram voice messages locally with whisper.cpp and returns text for downstream actions.
 ---
 
 # Voice Transcription
