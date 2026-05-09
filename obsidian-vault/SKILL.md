@@ -14,9 +14,9 @@ Use `read`, `write`, `edit`, and `exec` directly. There is no `obsidian_*` tool.
 - Always work inside `{{HOME}}/obsidian-vault`, never in the workspace
 - Read a note before editing it
 - Prefer `rg` for search, then `read` the matching files
-- Ask Ben which folder to use when the destination is not obvious
+- Use the existing category structure: Work, Teaching, Home, Open Source
 - Keep filenames descriptive, because the filename is the note title
-- Do not delete notes, archive or move them instead
+- Do not delete notes unless Ben explicitly asks for deletion
 - Use wikilinks like `[[Note Name]]` when adding references inside notes
 
 ## Folder map
@@ -24,10 +24,13 @@ Use `read`, `write`, `edit`, and `exec` directly. There is no `obsidian_*` tool.
 ```text
 {{HOME}}/obsidian-vault/
 ├── Archive/
-├── Ideas/
-├── Projects/
+├── Documents/
+│   ├── Work/
+│   ├── Teaching/
+│   ├── Home/
+│   └── Open Source/
+├── Ideas.md
 ├── Todo.md
-├── Projects.md
 └── README.md
 ```
 
@@ -100,30 +103,28 @@ Do not perform monthly archive movement to `Archive/Done-Items.md` in this skill
 
 When work is no longer urgent, move it back to `### Medium Priority`.
 
-## Project rules
+## Ideas rules
 
-Projects live in two places:
-- `Projects.md` for the dashboard view
-- `Projects/` for detail files
+`Ideas.md` is the single root list for future work.
 
-When creating a project:
-1. Create `Projects/Project Name.md`
-2. Include `status`, `created`, and `modified` in frontmatter
-3. Add a link in `Projects.md`
+- Keep ideas under the matching category heading.
+- Keep idea entries short and scannable.
+- If an idea becomes active, move it into `Todo.md`.
 
-When updating a project:
-1. Edit the detail file
-2. Update `modified`
-3. If status changes, update both the detail file frontmatter and the entry in `Projects.md`
+## Documents rules
 
-Allowed status values:
-- `active`
-- `paused`
-- `complete`
+`Documents/` holds longer-lived notes.
+
+- Use `Documents/Work/` for work notes.
+- Use `Documents/Teaching/` for teaching notes.
+- Use `Documents/Home/` for home notes.
+- Use `Documents/Open Source/` for open source notes.
+- Keep subfolders when they are already useful, like `Documents/Teaching/CUNY/`.
+- Put reference notes, planning notes, and support material in `Documents/`, not in `Todo.md` or `Ideas.md`.
 
 ## Periodic review cues
 
 - Daily: Correct typos, clean up misformatted notes, ensure relevant hashtags, remove empty lines, and move completed items to the bottom `## Done` section in `Todo.md`
 - Weekly: If archival is needed, run the `todo-archival` skill instead of deleting done items directly here.
-- Monthly: review category tracking notes
-- Quarterly: archive completed projects and plan new ones
+- Monthly: review `Ideas.md` and category notes in `Documents/`
+- Quarterly: archive stale notes and simplify the vault structure where needed
