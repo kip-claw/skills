@@ -25,7 +25,7 @@ Columns: Timestamp, Download (Mbps), Upload (Mbps), Ping (ms), Server, Provider
 
 After a successful run, the wrapper also updates:
 
-- `{{HOME}}/kip-claw/src/lib/speedTests.json`
+- `{{HOME}}/kip-claw/static/data/speedTests.json`
 
 This file is the public data source used by kip-claw stats components.
 

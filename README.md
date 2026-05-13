@@ -5,6 +5,7 @@ Public collection of personal OpenClaw skills, published automatically from a lo
 ## Included Skills
 
 - `cigar-humidor`
+- `geocoder`
 - `homepage-charts`
 - `movie-list`
 - `music-import`
