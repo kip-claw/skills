@@ -1,6 +1,6 @@
 ---
 name: nas-storage
-description: Manages NAS storage, file transfers, disk usage checks, drive health, Google Drive sync, and Cloudflare R2 offsite backup operations.
+description: Manages NAS storage, file transfers, disk usage checks, drive health, and Google Drive sync operations.
 ---
 
 # NAS Storage
@@ -61,24 +61,6 @@ that day's log.
 
 Google Photos is NOT synced via rclone — Google removed the API access in
 March 2025. Photos archives are handled separately via Google Takeout.
-
-**Offsite backup to Cloudflare R2:**
-```
-{{HOME}}/bin/kip-nas.sh r2-sync
-```
-
-The R2 offsite backup uses `rclone copy` (not sync) to upload the entire WD
-drive to Cloudflare R2 (`r2-backup:kip-nas-backup` bucket, Infrequent Access
-tier). Because it uses `copy`, files deleted on the NAS are preserved on R2 —
-this is intentional for disaster recovery.
-
-The sync is bandwidth-limited to 10 MB/s (`--bwlimit 10M`) to avoid
-saturating the Pi's connection. Initial sync of ~517GB will take many hours;
-subsequent runs are incremental and fast (checksum-based).
-
-R2 sync runs automatically on a weekly cron (Wednesday 3am — offset from the
-Google Drive sync on Sunday 2am). Logs land at
-`~/log/rclone/r2-<YYYY-MM-DD>.log` on the NAS.
 
 ## Notes
 
