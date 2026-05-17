@@ -62,6 +62,7 @@ gog --no-input -a "$GOG_ACCOUNT" sheets update 1GeVkWdyqKM7P8A0MGwWns3fOketRR5Th
 - **If address is missing**: look up the address on the web (e.g., via a quick search) before adding the entry
 
 - **Always confirm** before adding or updating places
+- **Always report completion** after adding or updating a row so Ben knows the change was actually made
 - **Alphabetical order**: After adding, sort the list by `name` ascending
 - **is_decent**: Ask Ben for Y/N; this affects background color (Y=green, N=purple)
 - **is_recommended**: Y/N flag for places Ben recommends
