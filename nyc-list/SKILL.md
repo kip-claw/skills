@@ -62,6 +62,9 @@ gog --no-input -a "$GOG_ACCOUNT" sheets update 1GeVkWdyqKM7P8A0MGwWns3fOketRR5Th
 - **If address is missing**: look up the address on the web (e.g., via a quick search) before adding the entry
 
 - **Always confirm** before adding or updating places
+- **Show the full draft entry** in the confirmation message so Ben can approve the exact row that will be written
+- **Ask for confirmation immediately after drafting**; do not stop at analysis or leave the request hanging without a direct approval prompt
+- **If waiting on approval**: say plainly that no change has been made yet and that the task is paused pending Ben's confirmation
 - **Always report completion** after adding or updating a row so Ben knows the change was actually made
 - **Alphabetical order**: After adding, sort the list by `name` ascending
 - **is_decent**: Ask Ben for Y/N; this affects background color (Y=green, N=purple)
@@ -72,6 +75,21 @@ gog --no-input -a "$GOG_ACCOUNT" sheets update 1GeVkWdyqKM7P8A0MGwWns3fOketRR5Th
 - **Address format**: Use full Google Maps-style addresses
 
 ## Examples
+
+### Confirmation message before add
+
+Use a direct confirmation prompt with the exact row contents:
+
+```text
+Confirm this NYC list entry and I'll add it:
+- name: Joe's Pizza
+- address: 150 E 14th St, New York, NY 10003
+- is_decent: Y
+- is_recommended: Y
+- is_elite: N
+- is_closed: N
+- notes: My neighborhood outpost of the famous pizza purveyor. Decent and reliably recommended for a slice nearby.
+```
 
 ### Add a new place (recommended, decent)
 
