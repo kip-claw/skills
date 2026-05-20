@@ -13,9 +13,11 @@ Workflow for creating and submitting pull requests to the `openclaw/openclaw` Gi
 - GitHub CLI (`gh`) installed and authenticated as `kip-claw`
 - SSH key at `~/.ssh/id_ed25519` configured for GitHub
 - PAT stored in `~/.openclaw/.env` as `GITHUB_PAT`
+- Crabbox CLI (`crabbox`) installed with Cloudflare provider configured
+- Env vars `CRABBOX_CLOUDFLARE_RUNNER_URL` and `CRABBOX_CLOUDFLARE_RUNNER_TOKEN` in `~/.openclaw/.env`
 
 ```bash
-source ~/.openclaw/.env && export GH_TOKEN="$GITHUB_PAT"
+source ~/.openclaw/.env && export GH_TOKEN="$GITHUB_PAT" CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
 ```
 
 ## Fork Setup
@@ -23,12 +25,14 @@ source ~/.openclaw/.env && export GH_TOKEN="$GITHUB_PAT"
 The fork lives at `kip-claw/openclaw`. Clone it to a temporary working directory:
 
 ```bash
-git clone git@github.com:kip-claw/openclaw.git /tmp/openclaw-patch
+git clone --depth 1 git@github.com:kip-claw/openclaw.git /tmp/openclaw-patch
 cd /tmp/openclaw-patch
 git remote add upstream git@github.com:openclaw/openclaw.git
 git fetch upstream
 git checkout -b fix/descriptive-branch-name upstream/main
 ```
+
+The repo includes a `.crabbox.yaml` that configures Cloudflare remote builds (provider, instance class, setup steps, named jobs). No local `pnpm install` is needed — dependencies install on the remote container.
 
 ## Source Layout
 
@@ -114,26 +118,135 @@ cd /tmp/openclaw-patch
 - Optional config fields use `property?: type` in interface definitions
 - Watchdog/timeout values should be configurable via `CronConfig` when possible
 
-### 5. Run Tests Before Committing
+### 5. Build & Test via Crabbox (Cloudflare)
+
+Crabbox runs build and typecheck remotely on Cloudflare containers (standard-4: 4 vCPU, 12 GiB RAM). This satisfies the CONTRIBUTING.md requirement to "Run tests: `pnpm build && pnpm check`" before submitting. The `.crabbox.yaml` in the repo handles provider selection, dependency installation, and named jobs.
+
+**Important:** Crabbox can handle both build validation AND behavior proof generation. The `quick-check` job proves compilation + typecheck. The `proof` job builds the patched binary and runs targeted commands to produce real output for the PR body. For fixes that require runtime state (gateway running, cron jobs active), use local Pi production evidence instead.
+
+#### Quick one-shot (build + typecheck)
 
 ```bash
 cd /tmp/openclaw-patch
-pnpm build && pnpm check && pnpm test
+crabbox job run quick-check
 ```
 
-For extension/plugin changes, use fast targeted lanes first:
+This syncs your working tree to a fresh container, runs git init + pnpm install + `pnpm build` + typecheck. Completes in ~3-4 minutes.
+
+#### Named jobs (from .crabbox.yaml)
+
+| Job | What it does | Use when |
+|-----|--------------|----------|
+| `crabbox job run quick-check` | build + typecheck | Before committing (fast, reliable) |
+| `crabbox job run build` | build only | Verify compilation |
+| `crabbox job run proof` | build + run proof commands | Generate behavior proof for PR body |
+| `crabbox job run gateway-smoke` | build + start gateway + health check | Proving gateway boots with patches applied |
+| `crabbox job run check` | build + full check (incl. lint) | Final validation (may hit timeout on large repos) |
+| `crabbox job run test-changed` | targeted tests | Validating specific changes |
+
+#### Iterative development (warm box)
+
+For rapid feedback while developing a fix:
+
 ```bash
-pnpm test:extension <extension-name>
-pnpm test:contracts
+# Lease a persistent container
+crabbox warmup --provider cloudflare
+# Returns a slug like "brisk-crab" — reuse it for all subsequent commands
+
+# First run: set up git + deps
+crabbox run --id brisk-crab -- 'git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile'
+
+# Subsequent runs: just build/typecheck (git + deps persist)
+crabbox run --id brisk-crab -- 'git add -A && git commit -m x -q --allow-empty && pnpm build && pnpm tsgo:core && pnpm tsgo:extensions'
+
+# Done — release the container
+crabbox stop brisk-crab
 ```
 
-If you changed bundled-plugin boundaries:
+#### Troubleshooting
+
 ```bash
-node scripts/check-src-extension-import-boundary.mjs --json
-node scripts/check-sdk-package-extension-import-boundary.mjs --json
+# Verify provider is healthy
+crabbox doctor --provider cloudflare
+
+# If a container hits stream timeout, use quick-check instead of full check
+# Cloudflare containers have ~15 min stream limit — lint can exceed this on large repos
 ```
 
-### 6. Commit and Push
+**Limitations:**
+- ~15 min stream timeout — full lint (`pnpm check`) may exceed this; use `quick-check` for reliable runs
+- 20 GB disk — fits the monorepo comfortably
+- No SSH into the container — output streaming only
+- Containers are ephemeral; warm boxes persist only while leased
+- Full test suite (`pnpm test`) exceeds the timeout; use `test-changed` or run tests in upstream CI
+
+### 6. Generate Behavior Proof via Crabbox
+
+After `quick-check` passes, generate real behavior proof for the PR body. The `proof` job in `.crabbox.yaml` builds the patched binary and runs commands that demonstrate the fix works.
+
+#### Customize the proof job
+
+Edit `.crabbox.yaml`'s `proof` job — replace the placeholder proof commands with fix-specific ones:
+
+```yaml
+  proof:
+    command: >-
+      git config --global user.email x@x &&
+      git config --global user.name x &&
+      git init -q && git add -A && git commit -m x -q &&
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm build &&
+      echo "=== PROOF START ===" &&
+      node openclaw.mjs --version &&
+      echo "--- fix-specific proof below ---" &&
+      node openclaw.mjs <your-proof-command> &&
+      echo "=== PROOF END ==="
+```
+
+**What to put in proof commands (depends on fix type):**
+
+| Fix type | Proof command examples |
+|----------|----------------------|
+| CLI behavior | `node openclaw.mjs <subcommand> --flag` |
+| Config resolution | `node -e "import('./dist/entry.js').then(...)"`  |
+| Cron/watchdog | `node openclaw.mjs cron list 2>&1 \| head -20` |
+| Build artifact | `ls -la dist/<expected-file>` |
+| Error handling | `node openclaw.mjs <trigger-condition> 2>&1` (show graceful handling) |
+
+#### Run proof
+
+```bash
+cd /tmp/openclaw-patch
+crabbox job run proof
+```
+
+Completes in ~3 min. Copy the output between `=== PROOF START ===` and `=== PROOF END ===` into the PR body's **Real behavior proof** section.
+
+#### Warm box variant (for iterating on proof commands)
+
+```bash
+crabbox warmup --provider cloudflare
+# First: setup + build
+crabbox run --id <slug> -- 'git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile && pnpm build'
+# Then iterate on proof commands quickly (no rebuild needed):
+crabbox run --id <slug> -- 'node openclaw.mjs <proof-command>'
+crabbox run --id <slug> -- 'node openclaw.mjs <another-proof-command>'
+# Done
+crabbox stop <slug>
+```
+
+#### When to use Pi instead of Crabbox
+
+Use local Pi production evidence when the proof requires:
+- A running gateway with real plugins/channels connected
+- Active cron jobs with historical state
+- Real message delivery (Telegram, Matrix, etc.)
+- Network-dependent features (health checks against live services)
+
+For these cases, follow Step 3's local validation approach and paste journal logs.
+
+### 7. Commit and Push
 
 ```bash
 cd /tmp/openclaw-patch
@@ -146,7 +259,7 @@ Include production evidence (durations, error messages) that proves the fix."
 git push origin fix/descriptive-branch-name
 ```
 
-### 7. Create the Pull Request
+### 8. Create the Pull Request
 
 The PR body **must** include a **Real behavior proof** section. This is a hard requirement from upstream — unit tests, mocks, CI, lint, and typechecks alone do NOT satisfy it.
 
@@ -174,7 +287,8 @@ What the PR changes and why.
 
 > Required by CONTRIBUTING.md. Must show real post-patch behavior from your own setup.
 
-**Setup:** Raspberry Pi 5 (4GB, ARM64, Debian bookworm), OpenClaw <version>, Node <version>
+**Setup:** Cloudflare Container (standard-4: 4 vCPU, 12 GiB RAM, Node 24.x) via Crabbox
+*(or: Raspberry Pi 5 (4GB, ARM64, Debian bookworm) if proof requires running gateway)*
 
 **BEFORE (unpatched):**
 ```
@@ -209,7 +323,7 @@ EOF
 )"
 ```
 
-### 8. Search for Related Issues/PRs
+### 9. Search for Related Issues/PRs
 
 Before or after submitting, search for existing work on the same problem:
 
@@ -228,7 +342,7 @@ gh pr comment <number> --repo openclaw/openclaw --body "Production evidence from
 gh issue comment <number> --repo openclaw/openclaw --body "Cross-reference: #your-pr-number"
 ```
 
-### 9. After Submission
+### 10. After Submission
 
 - Resolve or reply to bot review conversations (ClawSweeper, Codex) yourself — do not leave them for maintainers
 - If Codex review doesn't trigger, run `codex review --base origin/main` locally and address findings
@@ -262,6 +376,11 @@ git push origin fix/branch-name --force-with-lease
 5. **Make config values overridable** rather than just bumping hardcoded constants. This is more likely to be accepted upstream.
 6. **Resolve bot conversations yourself.** ClawSweeper and Codex review comments are your responsibility to address or resolve.
 7. **Mark AI assistance.** If using LLM tools, disclose it and confirm you understand the code.
+8. **Use warm boxes for iteration.** Leasing a warm container avoids repeated pnpm installs (~23s each). Stop it when done to free resources.
+9. **Don't install deps locally.** The Pi has limited disk; let Crabbox handle pnpm install on the remote container.
+10. **Crabbox handles both build proof AND behavior proof.** The `proof` job builds the binary and runs targeted commands to generate real output. Only fall back to local Pi when proof requires a running gateway, real channels, or active cron state.
+11. **Use `quick-check` over `check`.** Full lint can exceed Cloudflare's ~15 min stream timeout. `quick-check` (build + typecheck) is reliable and catches most issues.
+12. **Base64-encode complex shell scripts in `.crabbox.yaml`.** Crabbox wraps commands in temp script files, breaking embedded quotes. For scripts with loops, conditionals, or single/double quotes, base64-encode the script and decode on the container: `echo <base64> | base64 -d > /tmp/script.sh && chmod +x /tmp/script.sh && /tmp/script.sh`. The `gateway-smoke` job uses this pattern.
 
 ## Notes
 

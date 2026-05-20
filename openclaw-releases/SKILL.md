@@ -1,7 +1,7 @@
 ---
 name: openclaw-release-check
 description: Check for new OpenClaw package releases and notify the user when an update is available.
-metadata: {"openclaw": {"emoji": "📦", "schedule": "0 8 * * *"}}
+metadata: {"openclaw": {"emoji": "📦"}}
 ---
 
 # OpenClaw Release Check

@@ -7,11 +7,12 @@ description: Works with the Obsidian vault knowledge base to read, create, edit,
 
 Vault path: `{{HOME}}/obsidian-vault`
 
-Use `read`, `write`, `edit`, and `exec` directly. There is no `obsidian_*` tool.
+Use `read`, `write`, `edit`, and `exec` directly.
 
 ## Working rules
 
 - Always work inside `{{HOME}}/obsidian-vault`, never in the workspace
+- **Never read, edit, create, or delete anything under `Wiki/Kip/`** — that folder is managed by the `memory-wiki` plugin
 - Read a note before editing it
 - Prefer `rg` for search, then `read` the matching files
 - Use the existing category structure: Work, Teaching, Home, Open Source
@@ -29,6 +30,8 @@ Use `read`, `write`, `edit`, and `exec` directly. There is no `obsidian_*` tool.
 │   ├── Teaching/
 │   ├── Home/
 │   └── Open Source/
+├── Wiki/
+│   └── Kip/          ← OFF LIMITS (memory-wiki plugin)
 ├── Ideas.md
 ├── Todo.md
 └── README.md

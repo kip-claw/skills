@@ -1,0 +1,60 @@
+profile: openclaw-patch-check
+provider: cloudflare
+class: standard-4
+sync:
+  delete: true
+  checksum: false
+  fingerprint: true
+  timeout: 15m
+  exclude:
+    - .cache
+    - .turbo
+    - dist
+    - node_modules
+env:
+  allow:
+    - CI
+    - NODE_OPTIONS
+    - NODE_ENV
+setup:
+  - git init && git add -A && git commit -m init --quiet
+  - corepack enable
+  - pnpm install --frozen-lockfile
+jobs:
+  build:
+    command: corepack enable && pnpm install --frozen-lockfile && pnpm build
+  check:
+    command: git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm check
+  quick-check:
+    command: git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm tsgo:core && pnpm tsgo:extensions
+  test:
+    command: corepack enable && pnpm install --frozen-lockfile && pnpm test
+  test-changed:
+    command: git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm test:changed
+  gateway-smoke:
+    # Build, start the gateway briefly, confirm it boots without crashing.
+    command: >-
+      git config --global user.email x@x &&
+      git config --global user.name x &&
+      git init -q && git add -A && git commit -m x -q &&
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm build &&
+      echo IyEvYmluL3NoCmVjaG8gPT09IEdBVEVXQVkgU01PS0UgPT09Cm5vZGUgb3BlbmNsYXcubWpzIC0tdmVyc2lvbgpta2RpciAtcCAvcm9vdC8ub3BlbmNsYXcKZWNobyAneyJnYXRld2F5Ijp7ImF1dGgiOnsibW9kZSI6Im5vbmUifX19JyA+IC9yb290Ly5vcGVuY2xhdy9vcGVuY2xhdy5qc29uCm5vZGUgb3BlbmNsYXcubWpzIGdhdGV3YXkgcnVuIC0tYWxsb3ctdW5jb25maWd1cmVkID4vdG1wL2d3LmxvZyAyPiYxICYKR1c9JCEKZm9yIGkgaW4gMSAyIDMgNCA1IDY7IGRvCiAgc2xlZXAgMwogIGlmIG5vZGUgb3BlbmNsYXcubWpzIGhlYWx0aCAyPiYxOyB0aGVuCiAgICBlY2hvIEdBVEVXQVkgSEVBTFRIWQogICAga2lsbCAkR1cgMj4vZGV2L251bGwKICAgIHdhaXQgJEdXIDI+L2Rldi9udWxsCiAgICBlY2hvID09PSBHQVRFV0FZIFNNT0tFIEVORCA9PT0KICAgIGV4aXQgMAogIGZpCiAgZWNobyAicmV0cnkgJGkuLi4iCmRvbmUKZWNobyBHQVRFV0FZIEZBSUxFRCBUTyBCRUNPTUUgSEVBTFRIWQpjYXQgL3RtcC9ndy5sb2cKa2lsbCAkR1cgMj4vZGV2L251bGwKd2FpdCAkR1cgMj4vZGV2L251bGwKZWNobyA9PT0gR0FURVdBWSBTTU9LRSBFTkQgPT09CmV4aXQgMQo= | base64 -d > /tmp/smoke.sh &&
+      chmod +x /tmp/smoke.sh &&
+      /tmp/smoke.sh
+  proof:
+    # Build and exercise the patched CLI to generate behavior proof for the PR.
+    # Replace the PROOF COMMANDS section with fix-specific commands.
+    command: >-
+      git config --global user.email x@x &&
+      git config --global user.name x &&
+      git init -q && git add -A && git commit -m x -q &&
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm build &&
+      echo "=== PROOF START ===" &&
+      node openclaw.mjs --version &&
+      echo "--- PROOF COMMANDS (replace with fix-specific) ---" &&
+      node openclaw.mjs --help 2>&1 | head -5 &&
+      echo "=== PROOF END ==="
