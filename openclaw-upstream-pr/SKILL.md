@@ -243,8 +243,11 @@ Use local Pi production evidence when the proof requires:
 - Active cron jobs with historical state
 - Real message delivery (Telegram, Matrix, etc.)
 - Network-dependent features (health checks against live services)
+- **Auth/credential resolution** — stored OAuth tokens, API keys in the profile store, or cross-provider credential lookups (Crabbox containers have no stored credentials)
 
 For these cases, follow Step 3's local validation approach and paste journal logs.
+
+**Lesson learned:** Crabbox is excellent as a remote CI (build + typecheck confirmation without local toolchain), but for fixes involving credential resolution (e.g. openai/openai-codex cross-provider auth), the proof MUST come from the Pi where real credentials exist. A fresh container cannot exercise auth paths that depend on stored OAuth tokens. Plan accordingly — use `quick-check` for build validation, then patch the local Pi runtime (`/usr/lib/node_modules/openclaw/dist/`) for behavior proof. Remember the dist files use **tabs** for indentation; Python `sed`/replace scripts must account for this.
 
 ### 7. Commit and Push
 
