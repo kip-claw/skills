@@ -6,7 +6,7 @@ metadata: {"openclaw": {"emoji": "🫘", "requires": {"bins": ["gog"]}}}
 
 # Cigar Humidor (Google Sheets)
 
-Manages Ben's cigar humidor tracking in a single Google Sheet with three tabs:
+Manages Ben's cigar humidor tracking in a single Google Sheet with four tabs:
 - **Cigar Log:** `https://docs.google.com/spreadsheets/d/1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8/edit`
 
 ## Sheet Structure
@@ -41,6 +41,14 @@ Columns: `Date Changed`, `Pack Type`, `RH%`, `Pack Count`, `Notes`
 - **Pack Count**: Number of packs
 - **Notes**: Reason for change or observations
 
+### Tab 4: Smoked Cigars
+Columns: `Make`, `Model`, `Date`, `Notes`
+
+- **Make**: Cigar brand/maker
+- **Model**: Specific cigar model/name
+- **Date**: Smoked date (YYYY-MM-DD)
+- **Notes**: Smoking notes, impressions, or context
+
 ## Commands
 
 ### Log a Humidity Reading
@@ -67,6 +75,14 @@ gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39P
   --insert INSERT_ROWS
 ```
 
+### Log a Smoked Cigar
+
+```bash
+gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A:D" \
+  --values-json '[["Martinez","Flatiron","2026-05-22","Nice draw and solid flavor throughout."]]' \
+  --insert INSERT_ROWS
+```
+
 ### Query Cigars
 
 ```bash
@@ -85,11 +101,18 @@ gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr
 gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Boveda Changes!A1:E10" --json
 ```
 
+### Query Smoked Cigars
+
+```bash
+gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A1:D10" --json
+```
+
 ## Workflow Rules
 
 - **Always confirm** before adding entries
 - **Prompt for missing fields**: If Ben doesn't provide RH%, ask for it before adding humidity readings
 - **Prompt for missing fields**: If Ben doesn't provide all cigar details, ask before adding
+- **Prompt for missing fields**: If Ben doesn't provide make/model/date when logging a smoked cigar, ask before adding
 - **New entries go at the TOP** of each tab (row 2, right after the header)
 - **Date format**: YYYY-MM-DD for all date fields
 - **Time format**: HH:MM (optional)
@@ -113,10 +136,18 @@ gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39P
   --insert INSERT_ROWS
 ```
 
+### Log smoked cigar
+
+```bash
+gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A:D" \
+  --values-json '[["Arturo Fuente","Hemingway Short Story","2026-05-22","Burned well and tasted great with coffee."]]' \
+  --insert INSERT_ROWS
+```
+
 ## Notes
 
 - Sheet ID: `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`
-- Tabs: `Cigars`, `Humidity Readings`, `Boveda Changes`
+- Tabs: `Cigars`, `Humidity Readings`, `Boveda Changes`, `Smoked Cigars`
 - Requires `gog` with Sheets API access (service-level account context is preconfigured)
 - Old Obsidian files archived: `{{HOME}}/obsidian-vault/Projects/Cigar Humidor Humidity Log.md` and `{{HOME}}/obsidian-vault/Projects/Cigar Log.md`
 - Separate Humidity Log sheet (`1Wf5klf_gH85ciBEQVtAvIbtVqNEzFY6Rl8G_RwfjStg`) can be deleted or archived
