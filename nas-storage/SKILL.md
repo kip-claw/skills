@@ -60,7 +60,38 @@ check the most recent sync's outcome, look at the last "Errors:" line in
 that day's log.
 
 Google Photos is NOT synced via rclone — Google removed the API access in
-March 2025. Photos archives are handled separately via Google Takeout.
+March 2025. Photos are synced from Google Takeout exports using a dedicated
+script (see below).
+
+## Google Photos Sync
+
+Photos from Google Takeout are synced from the laptop to the NAS using:
+
+```
+{{HOME}}/bin/kip-photos-sync.py sync
+```
+
+The script mounts the laptop's Takeout folder via sshfs, then rsyncs year
+folders (2005–2026) and 67 named albums to the NAS Photos directory at
+`/mnt/nas-photos/Photos/`. Albums are sorted into year subfolders or
+`_unsorted/` based on their content dates.
+
+**Prerequisites:**
+- Laptop must be on the same Tailscale network
+- Google Takeout export downloaded to `~/Downloads/Takeout/Google Photos` on the laptop
+
+**Commands:**
+```
+kip-photos-sync.py mount       — mount laptop Takeout via sshfs
+kip-photos-sync.py plan        — show what would be synced (dry run)
+kip-photos-sync.py sync        — sync all years + albums
+kip-photos-sync.py sync-years  — sync only year folders
+kip-photos-sync.py sync-albums — sync only named albums
+kip-photos-sync.py unmount     — unmount when done
+```
+
+The sync is incremental (rsync) — safe to re-run if interrupted. Typical
+full sync transfers ~10GB at 6–10 MB/sec over Tailscale.
 
 ## Notes
 
