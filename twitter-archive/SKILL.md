@@ -70,6 +70,19 @@ To export a Git-friendly JSONL backup:
 
 This is included in the existing `r2-sync` offsite backup automatically.
 
+## Kip-Claw Export
+
+A daily cron job exports a summary JSON for the kip-claw Twitter archive page:
+
+- **Cron:** `Twitter archive export` — runs daily at 6:00 AM ET (after sync at 5:30 AM)
+- **Wrapper:** `{{HOME}}/bin/kip-twitter-export.sh`
+- **Script:** `{{HOME}}/bin/twitter-export-kipclaw.py <json_path>`
+- **Output:** `{{HOME}}/kip-claw/static/data/twitterArchive.json`
+- **Commits** changes to kip-claw and pushes to deploy
+
+The export reads from the NAS backup (`data/timeline_edges/authored.jsonl` + `data/tweets/*.jsonl`)
+and produces summary stats, monthly tweet counts, and top 10 tweets by likes.
+
 ## Re-importing
 
 If a newer archive is downloaded, transfer it to the NAS and re-import:
