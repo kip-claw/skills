@@ -1,50 +1,42 @@
 ---
 name: todo-archival
-description: Archives completed Todo.md items into Archive/Done-Items.md to keep the active task list clean.
+description: Move checked items in Todo.md's `## Done` section into the `## Since Last Digest` buffer. The buffer stays in Todo.md until the news-apps-digest skill (or Ben) sweeps it to Archive/Done-Items.md after a digest is sent.
 ---
 
 # Todo Archival
 
+Buffer section: `## Since Last Digest` in `{{HOME}}/obsidian-vault/Todo.md`
 Archive path: `{{HOME}}/obsidian-vault/Archive/Done-Items.md`
 Todo file: `{{HOME}}/obsidian-vault/Todo.md`
 
 ## Purpose
 
-Nightly archival keeps the main Todo.md file clean and focused by moving completed items to a permanent archive file.
+Keep the active `## Work`/`## Teaching`/`## Home`/`## Open Source` lists clean by moving checked items out of the `## Done` section into the `## Since Last Digest` buffer. The buffer is the source of truth for what's shipped between digests; the `news-apps-digest` skill reads from it when drafting and flushes it to the monthly archive when Ben confirms a digest has been sent.
+
+**Important:** This skill no longer archives directly to `Archive/Done-Items.md`. That responsibility moved to `news-apps-digest` so digests and archived items stay in sync.
 
 ## Working rules
 
-- Archive done items to Archive/Done-Items.md organized by month
-- Preserve all formatting and hashtags when archiving
-- Update frontmatter timestamps when editing Todo.md
-
-## Archive file format
-
-The Done-Items archive uses monthly sections:
-
-```markdown
----
-created: '<ISO timestamp>'
-modified: '<ISO timestamp>'
----
-
-# Done Items Archive
-
-## May 2026
-- [x] Item with #tag
-- [x] Another completed item
-
-## April 2026
-- [x] Older completed item
-```
-
-When adding a new month section, add it at the top (most recent first).
+- Move checked items from `## Done` into `## Since Last Digest`, preserving order, formatting, and all hashtags
+- Do not touch items already in `## Since Last Digest`
+- Do not write to `Archive/Done-Items.md` (that's `news-apps-digest`'s job after a digest is sent)
+- Update the `modified:` frontmatter timestamp on `Todo.md` when items move
+- Leave the `## Done` header in place (it stays empty between runs and that's fine)
 
 ## Process
 
 1. Read `{{HOME}}/obsidian-vault/Todo.md` completely
-2. Identify items in the `## Done` section that are checked off
-3. If Archive/Done-Items.md doesn't exist, create it with proper frontmatter
-4. Move archived items to the archive file (newest month at top)
-5. Update the `modified` timestamp in frontmatter for both files
-7. Commit changes with message: "Archive done items from todo list"
+2. Identify checked items (`- [x] ...`) under the `## Done` section
+3. If there are no checked items, exit cleanly — nothing to do
+4. Append those items to the bottom of the `## Since Last Digest` section (above `## Done`)
+5. Remove them from `## Done`
+6. Bump the `modified:` timestamp in the frontmatter
+7. Commit with message: `Move completed items into Since Last Digest buffer`
+
+## Why this changed
+
+Originally, this skill flushed checked items straight into a monthly section of `Archive/Done-Items.md`. That made "what's been shipped since the last digest" hard to reconstruct — it required diffing the archive across an arbitrary cadence. Now the buffer is explicit, visible in Obsidian, and tied 1:1 to a digest's lifecycle.
+
+## Notes
+
+- If you find yourself wanting to push items into `Archive/Done-Items.md` directly (e.g., Ben requests "archive everything in the buffer"), call `news-apps-digest` with a flush flag — don't bypass it. The digest skill stamps each archived line with a `<!-- digest: YYYY-MM-DD -->` marker so future skills can reconstruct which digest absorbed which item.
