@@ -1,0 +1,16 @@
+# Required (always)
+httpx>=0.27
+trafilatura>=2.0
+PyYAML>=6.0
+mutagen>=1.47
+
+# Optional extras — install only what your default provider needs:
+#   openai      pip install openai
+#   elevenlabs  pip install elevenlabs
+#   piper       apt install piper / from binary release; no Python dep
+#   kokoro      from upstream; no required Python dep
+#   PDF input   pip install pypdf
+#   EPUB input  pip install ebooklib beautifulsoup4
+
+# System deps:
+#   ffmpeg (apt install ffmpeg) — required for concat + non-mp3 outputs

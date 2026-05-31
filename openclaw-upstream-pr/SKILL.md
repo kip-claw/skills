@@ -10,24 +10,31 @@ Workflow for creating and submitting pull requests to the `openclaw/openclaw` Gi
 
 ## Prerequisites
 
-- GitHub CLI (`gh`) installed and authenticated as `kip-claw`
+- GitHub CLI (`gh`) installed and authenticated as `kip-claw` (verify with `gh auth status`)
 - SSH key at `~/.ssh/id_ed25519` configured for GitHub
-- PAT stored in `~/.openclaw/.env` as `GITHUB_PAT`
 - Crabbox CLI (`crabbox`) installed with Cloudflare provider configured
 - Env vars `CRABBOX_CLOUDFLARE_RUNNER_URL` and `CRABBOX_CLOUDFLARE_RUNNER_TOKEN` in `~/.openclaw/.env`
 
 ```bash
-source ~/.openclaw/.env && export GH_TOKEN="$GITHUB_PAT" CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
+# gh is already authenticated system-wide — no need to export GH_TOKEN.
+# Source the env only for Crabbox credentials:
+source ~/.openclaw/.env && export CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
 ```
+
+**Prefer `gh` over naked `git`/curl wherever an equivalent exists.** `gh` handles auth, fork-awareness, and API plumbing for you. Only fall back to raw `git` for operations `gh` doesn't cover (commit, push, rebase, local branching).
 
 ## Fork Setup
 
-The fork lives at `kip-claw/openclaw`. Clone it to a temporary working directory:
+The fork lives at `kip-claw/openclaw`. Use `gh repo clone` — it automatically sets the `upstream` remote to the parent repo for forks:
 
 ```bash
-git clone --depth 1 git@github.com:kip-claw/openclaw.git /tmp/openclaw-patch
+gh repo clone kip-claw/openclaw /tmp/openclaw-patch
 cd /tmp/openclaw-patch
-git remote add upstream git@github.com:openclaw/openclaw.git
+# `upstream` remote is already configured by `gh repo clone` for forks. Verify:
+git remote -v   # should show origin=kip-claw/openclaw, upstream=openclaw/openclaw
+
+# Sync the fork's default branch with upstream before branching:
+gh repo sync kip-claw/openclaw --source openclaw/openclaw
 git fetch upstream
 git checkout -b fix/descriptive-branch-name upstream/main
 ```
@@ -251,6 +258,8 @@ For these cases, follow Step 3's local validation approach and paste journal log
 
 ### 7. Commit and Push
 
+`git` is still the right tool for local commits and pushing branches (no `gh` equivalent for these):
+
 ```bash
 cd /tmp/openclaw-patch
 git add -A
@@ -259,7 +268,7 @@ git commit -m "fix(cron): descriptive summary of the change
 Longer explanation of the problem, root cause, and fix approach.
 Include production evidence (durations, error messages) that proves the fix."
 
-git push origin fix/descriptive-branch-name
+git push -u origin fix/descriptive-branch-name
 ```
 
 ### 8. Create the Pull Request
@@ -267,8 +276,7 @@ git push origin fix/descriptive-branch-name
 The PR body **must** include a **Real behavior proof** section. This is a hard requirement from upstream — unit tests, mocks, CI, lint, and typechecks alone do NOT satisfy it.
 
 ```bash
-source ~/.openclaw/.env && export GH_TOKEN="$GITHUB_PAT"
-
+# gh is system-authenticated — no env export needed.
 gh pr create \
   --repo openclaw/openclaw \
   --head kip-claw:fix/descriptive-branch-name \
@@ -347,13 +355,23 @@ gh issue comment <number> --repo openclaw/openclaw --body "Cross-reference: #you
 
 ### 10. After Submission
 
-- Resolve or reply to bot review conversations (ClawSweeper, Codex) yourself — do not leave them for maintainers
+Use `gh` to monitor the PR after creation — no need to leave the terminal:
+
+```bash
+gh pr view --repo openclaw/openclaw <number>          # full PR detail + comments
+gh pr checks --repo openclaw/openclaw <number>        # CI status
+gh pr status --repo openclaw/openclaw                 # all your PRs at a glance
+gh pr diff --repo openclaw/openclaw <number>          # confirm what reviewers see
+```
+
+- Resolve or reply to bot review conversations (ClawSweeper, Codex) yourself — do not leave them for maintainers (`gh pr comment` / `gh pr review` for replies)
 - If Codex review doesn't trigger, run `codex review --base origin/main` locally and address findings
 - Monitor for maintainer feedback
-- Be prepared to rebase if `upstream/main` moves ahead:
+- Be prepared to rebase if `upstream/main` moves ahead. Use `gh repo sync` to update the fork's default branch first, then rebase locally (rebase has no `gh` equivalent):
 
 ```bash
 cd /tmp/openclaw-patch
+gh repo sync kip-claw/openclaw --source openclaw/openclaw
 git fetch upstream
 git rebase upstream/main
 git push origin fix/branch-name --force-with-lease
@@ -384,6 +402,7 @@ git push origin fix/branch-name --force-with-lease
 10. **Crabbox handles both build proof AND behavior proof.** The `proof` job builds the binary and runs targeted commands to generate real output. Only fall back to local Pi when proof requires a running gateway, real channels, or active cron state.
 11. **Use `quick-check` over `check`.** Full lint can exceed Cloudflare's ~15 min stream timeout. `quick-check` (build + typecheck) is reliable and catches most issues.
 12. **Base64-encode complex shell scripts in `.crabbox.yaml`.** Crabbox wraps commands in temp script files, breaking embedded quotes. For scripts with loops, conditionals, or single/double quotes, base64-encode the script and decode on the container: `echo <base64> | base64 -d > /tmp/script.sh && chmod +x /tmp/script.sh && /tmp/script.sh`. The `gateway-smoke` job uses this pattern.
+13. **Prefer `gh` over naked `git`/curl.** `gh` is system-authenticated and fork-aware: `gh repo clone` sets `upstream` automatically, `gh repo sync` updates the fork without manual fetch/merge, `gh pr {create,view,checks,diff,comment,status}` cover the PR lifecycle. Only fall back to raw `git` for local-only operations: commit, push, rebase, branch.
 
 ## Notes
 

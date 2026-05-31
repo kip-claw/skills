@@ -1,0 +1,77 @@
+# --- TTS provider selection ---------------------------------------------------
+provider:
+  default: openai
+  fallbacks:
+    - openai
+    - piper
+    - elevenlabs
+    - kokoro
+
+# --- Per-provider settings ----------------------------------------------------
+providers:
+  openai:
+    model: gpt-4o-mini-tts
+    voice: alloy            # alloy|echo|fable|onyx|nova|shimmer
+    format: mp3
+    api_key_env: OPENAI_API_KEY
+  elevenlabs:
+    model: eleven_turbo_v2_5
+    voice: Rachel
+    api_key_env: ELEVENLABS_API_KEY
+  piper:
+    # Offline. Recommended fallback on the Pi.
+    bin_env: PIPER_BIN          # e.g. /usr/local/bin/piper
+    voice_env: PIPER_VOICE      # e.g. {{HOME}}/.local/share/piper/en_US-amy-medium.onnx
+    sample_rate: 22050
+  kokoro:
+    bin_env: KOKORO_BIN
+    voice_env: KOKORO_VOICE
+
+# --- Voice + delivery defaults ------------------------------------------------
+voice: alloy
+speed: 1.0
+format: mp3                # mp3 or m4a (m4a enables proper chapter markers)
+
+# --- Chunking -----------------------------------------------------------------
+chunk:
+  max_chars: 3800          # safe under OpenAI's 4096 TTS char limit
+  sentence_split: true     # prefer sentence boundaries when chunking
+  prepend_section_title: true
+
+# --- Cache --------------------------------------------------------------------
+cache:
+  enabled: true
+  dir: ~/.cache/openclaw-audiobook
+  # cache key = sha256(provider + voice + speed + chunk_text)
+
+# --- Output -------------------------------------------------------------------
+audio_dir: ~/audiobooks
+log_path: ~/audiobooks/_log.jsonl
+filename_template: "{date}_{slug}.{ext}"      # {date}=YYYY-MM-DD, {slug}=kebab title
+
+# --- Optional features --------------------------------------------------------
+podcast:
+  enabled: false
+  intro: "You are listening to an audiobook narrated by OpenClaw. The title is {title}, by {author}."
+  outro: "End of {title}. Thank you for listening."
+
+summary:
+  enabled: false
+  prompt: "Summarize the following article in roughly 400 words, preserving the author's voice and key arguments. Output only the summary, no preamble."
+
+chapters:
+  enabled: true            # written into m4a; mp3 chapters are best-effort
+
+rss:
+  enabled: false
+  feed_path: ~/audiobooks/feed.xml
+  base_url: "https://files.kip.computer/audiobooks/"
+  title: "Kip's Audiobooks"
+  author: "OpenClaw"
+
+# --- Retries / timeouts -------------------------------------------------------
+http:
+  timeout_seconds: 30
+  retries: 3
+tts:
+  retries: 2
