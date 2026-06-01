@@ -6,6 +6,7 @@ description: Controls TV, Yamaha receiver, and Kodi playback for music, video, p
 # TV and Media Control
 
 Kip is connected to a Yamaha RX-V379 receiver and Samsung TV via HDMI.
+
 Kodi runs on Kip and serves media from the NAS. All control goes through
 `{{HOME}}/bin/kip-tv.sh`.
 
