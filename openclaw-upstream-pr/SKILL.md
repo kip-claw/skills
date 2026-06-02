@@ -23,8 +23,6 @@ source ~/.openclaw/.env && export CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLA
 
 **Prefer `gh` over naked `git`/curl wherever an equivalent exists.** `gh` handles auth, fork-awareness, and API plumbing for you. Only fall back to raw `git` for operations `gh` doesn't cover (commit, push, rebase, local branching).
 
-**Default validation policy:** run build/typecheck/tests in Crabbox first (remote), not locally. Use local machine test runs only when Crabbox is unavailable.
-
 ## Fork Setup
 
 The fork lives at `kip-claw/openclaw`. Use `gh repo clone` — it automatically sets the `upstream` remote to the parent repo for forks:
@@ -92,11 +90,9 @@ cd /tmp/openclaw-patch
 grep -rn "RELEVANT_CONSTANT" src/
 ```
 
-### 3. Validate Runtime Behavior on Pi (Only When Needed)
+### 3. Validate the Fix Locally First
 
-Use local Pi runtime validation for real-environment behavior proof only (for example, Telegram transport, live gateway state, stored credentials). Do **not** use this as the default path for build/typecheck/unit tests.
-
-Patch the compiled JS in production to confirm behavior when needed:
+Patch the compiled JS in production to confirm the fix works before writing the PR:
 
 ```bash
 # Edit the compiled file
@@ -133,34 +129,22 @@ cd /tmp/openclaw-patch
 
 Crabbox runs build and typecheck remotely on Cloudflare containers (standard-4: 4 vCPU, 12 GiB RAM). This satisfies the CONTRIBUTING.md requirement to "Run tests: `pnpm build && pnpm check`" before submitting. The `.crabbox.yaml` in the repo handles provider selection, dependency installation, and named jobs.
 
-**Default rule:** whenever feasible, run all validation in Crabbox (build, typecheck, and targeted tests). Avoid local test execution by default.
-
 **Important:** Crabbox can handle both build validation AND behavior proof generation. The `quick-check` job proves compilation + typecheck. The `proof` job builds the patched binary and runs targeted commands to produce real output for the PR body. For fixes that require runtime state (gateway running, cron jobs active), use local Pi production evidence instead.
 
-#### Quick one-shot (build + targeted tests)
+#### Quick one-shot (build + typecheck)
 
 ```bash
 cd /tmp/openclaw-patch
-# Export Cloudflare runner env vars from your profile
-set -a && source ~/.openclaw/.env && set +a
-
-# Use a one-shot remote run when job aliases differ per repo
-crabbox run -provider cloudflare -- bash -lc '
-  set -euo pipefail
-  env CI=1 corepack pnpm install --frozen-lockfile
-  env CI=1 corepack pnpm build
-  env CI=1 corepack pnpm vitest run <targeted-test-files>
-'
+crabbox job run quick-check
 ```
 
-This syncs your working tree to a fresh container and runs one-shot validation remotely (no watch mode).
+This syncs your working tree to a fresh container, runs git init + pnpm install + `pnpm build` + typecheck. Completes in ~3-4 minutes.
 
 #### Named jobs (from .crabbox.yaml)
 
 | Job | What it does | Use when |
 |-----|--------------|----------|
-| `crabbox run -provider cloudflare -- bash -lc '...pnpm build && pnpm vitest run ...'` | build + targeted tests | Default, portable across repos |
-| `crabbox job run <repo-job>` | repo-defined checks | Use when `.crabbox.yaml` jobs are known-good |
+| `crabbox job run quick-check` | build + typecheck | Before committing (fast, reliable) |
 | `crabbox job run build` | build only | Verify compilation |
 | `crabbox job run proof` | build + run proof commands | Generate behavior proof for PR body |
 | `crabbox job run gateway-smoke` | build + start gateway + health check | Proving gateway boots with patches applied |
@@ -190,7 +174,6 @@ crabbox stop brisk-crab
 
 ```bash
 # Verify provider is healthy
-set -a && source ~/.openclaw/.env && set +a
 crabbox doctor --provider cloudflare
 
 # If a container hits stream timeout, use quick-check instead of full check
