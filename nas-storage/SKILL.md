@@ -40,6 +40,14 @@ When asked about NAS storage, disk usage, or files, always use {{HOME}}/bin/kip-
 {{HOME}}/bin/kip-nas.sh health
 ```
 
+Interpret SMART output as follows:
+
+- `PASSED` / healthy SMART output: drive health check passed.
+- `FAILED` or explicit SMART failure text: alert user via Telegram immediately.
+- `SMART_UNAVAILABLE: ...`: telemetry is unavailable (tooling/permissions/USB bridge), not a confirmed drive failure.
+
+When SMART is unavailable, include the reason in summaries (for example: `smartctl not installed`, `sudo requires password`, or `no working transport`) and avoid phrasing it as drive failure.
+
 **Sync Google Drive to NAS:**
 ```
 {{HOME}}/bin/kip-nas.sh sync
@@ -98,4 +106,5 @@ full sync transfers ~10GB at 6–10 MB/sec over Tailscale.
 - If the script times out (ConnectTimeout=5), check Tailscale status on both devices
 - rsync transfers are resumable — safe to re-run if interrupted
 - Drive health: PASSED = fine, FAILED = alert user via Telegram and phone-speak immediately
+- `SMART_UNAVAILABLE` means telemetry is unavailable, not failed; report it as an observability gap and include reason text
 - Do not write files directly to the Seagate backup drive

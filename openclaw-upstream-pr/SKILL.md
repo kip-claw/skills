@@ -21,6 +21,8 @@ Workflow for creating and submitting pull requests to the `openclaw/openclaw` Gi
 source ~/.openclaw/.env && export CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
 ```
 
+**CRITICAL env note:** values in `~/.openclaw/.env` are not auto-loaded into random interactive shells. Before any Crabbox command in a fresh terminal/session, run the `source ~/.openclaw/.env` line above (or explicitly pass `CRABBOX_CLOUDFLARE_RUNNER_URL`/`CRABBOX_CLOUDFLARE_RUNNER_TOKEN`). If you skip this, Crabbox may appear "not configured" even though the values exist in the file.
+
 **Prefer `gh` over naked `git`/curl wherever an equivalent exists.** `gh` handles auth, fork-awareness, and API plumbing for you. Only fall back to raw `git` for operations `gh` doesn't cover (commit, push, rebase, local branching).
 
 ## Fork Setup
@@ -129,6 +131,8 @@ cd /tmp/openclaw-patch
 
 Crabbox runs build and typecheck remotely on Cloudflare containers (standard-4: 4 vCPU, 12 GiB RAM). This satisfies the CONTRIBUTING.md requirement to "Run tests: `pnpm build && pnpm check`" before submitting. The `.crabbox.yaml` in the repo handles provider selection, dependency installation, and named jobs.
 
+**Remote-first test policy (default):** run every test/validation that can run remotely on Crabbox, not on the Pi. Use local Pi execution only when the check requires local runtime state, credentials, or live channel integrations that cannot exist in an ephemeral Crabbox container.
+
 **Important:** Crabbox can handle both build validation AND behavior proof generation. The `quick-check` job proves compilation + typecheck. The `proof` job builds the patched binary and runs targeted commands to produce real output for the PR body. For fixes that require runtime state (gateway running, cron jobs active), use local Pi production evidence instead.
 
 #### Quick one-shot (build + typecheck)
@@ -146,6 +150,7 @@ This syncs your working tree to a fresh container, runs git init + pnpm install 
 |-----|--------------|----------|
 | `crabbox job run quick-check` | build + typecheck | Before committing (fast, reliable) |
 | `crabbox job run build` | build only | Verify compilation |
+| `crabbox run --provider cloudflare --shell 'pnpm docs:list'` | docs index validation | Docs-only or doc-touching PRs |
 | `crabbox job run proof` | build + run proof commands | Generate behavior proof for PR body |
 | `crabbox job run gateway-smoke` | build + start gateway + health check | Proving gateway boots with patches applied |
 | `crabbox job run check` | build + full check (incl. lint) | Final validation (may hit timeout on large repos) |
