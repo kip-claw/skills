@@ -22,20 +22,20 @@ Populated automatically by the exit trap in each bin script via `kip-cron-log.sh
 ### Tab 3: OpenClaw Jobs
 Columns: `Timestamp`, `Job Name`, `Status`, `Duration (s)`, `Consecutive Errors`, `Error Reason`, `Notes`
 
-Populated by `kip-openclaw-jobs.sh` (daily snapshot of `~/.openclaw/cron/jobs-state.json`).
+Populated by `openclaw-jobs-snapshot.sh` (daily snapshot of `~/.openclaw/cron/jobs-state.json`).
 
 ### Tab 4: OpenClaw Config
 Columns: `Timestamp`, `Version`, `Primary Model`, `Agent Runtime`, `Memory Search Provider`, `Memory Search Model`, `Skills Count`, `Gateway Mode`, `Notes`
 
-Populated by `kip-openclaw-config.sh` (daily snapshot of `openclaw.json` + `update-check.json`).
+Populated by `openclaw-config-snapshot.sh` (daily snapshot of `openclaw.json` + `update-check.json`).
 
 ## Collection Scripts
 
 | Script | Frequency | Logs to |
 |---|---|---|
-| `kip-pi-health.sh` | Every 6 hours | Pi Health tab + `kip-claw/src/lib/piHealth.json` |
-| `kip-openclaw-jobs.sh` | Daily at 4:00am | OpenClaw Jobs tab + `kip-claw/src/lib/openclawJobs.json` |
-| `kip-openclaw-config.sh` | Daily at 4:15am | OpenClaw Config tab + `kip-claw/src/lib/openclawConfig.json` |
+| `system-pi-health-report.sh` | Every 6 hours | Pi Health tab + `kip-claw/src/lib/piHealth.json` |
+| `openclaw-jobs-snapshot.sh` | Daily at 4:00am | OpenClaw Jobs tab + `kip-claw/src/lib/openclawJobs.json` |
+| `openclaw-config-snapshot.sh` | Daily at 4:15am | OpenClaw Config tab + `kip-claw/src/lib/openclawConfig.json` |
 | `kip-cron-log.sh` | On every bin script exit | Cron Health tab |
 
 ## Commands
@@ -67,19 +67,19 @@ gog --no-input -a "$GOG_ACCOUNT" sheets get 1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfV
 ### Manually trigger a Pi health snapshot
 
 ```bash
-bash {{HOME}}/bin/kip-pi-health.sh
+bash {{HOME}}/bin/system-pi-health-report.sh
 ```
 
 ### Manually trigger an OpenClaw jobs snapshot
 
 ```bash
-bash {{HOME}}/bin/kip-openclaw-jobs.sh
+bash {{HOME}}/bin/openclaw-jobs-snapshot.sh
 ```
 
 ### Manually trigger an OpenClaw config snapshot
 
 ```bash
-bash {{HOME}}/bin/kip-openclaw-config.sh
+bash {{HOME}}/bin/openclaw-config-snapshot.sh
 ```
 
 ## Notes

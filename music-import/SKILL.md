@@ -11,7 +11,7 @@ managed by beets. The library uses the Kodi-friendly path template
 `Artist/Album (Year)/NN - Track.ext` and contains 120+ albums.
 
 When the user wants to add new music — typically Bandcamp zip downloads —
-go through `{{HOME}}/bin/kip-music-import.sh`. Do NOT run beets, rsync, unzip,
+go through `{{HOME}}/bin/nas-music-import.sh`. Do NOT run beets, rsync, unzip,
 or sqlite directly; the wrapper script handles all NAS-side operations through
 the kip-nas SSH alias.
 
@@ -79,32 +79,32 @@ below.
 
 **Show what's in staging:**
 ```
-{{HOME}}/bin/kip-music-import.sh status
+{{HOME}}/bin/nas-music-import.sh status
 ```
 
 **Extract zips and list ready albums:**
 ```
-{{HOME}}/bin/kip-music-import.sh prepare
+{{HOME}}/bin/nas-music-import.sh prepare
 ```
 
 **Check staged albums against existing library:**
 ```
-{{HOME}}/bin/kip-music-import.sh check
+{{HOME}}/bin/nas-music-import.sh check
 ```
 
 **Clean up staging after a successful import:**
 ```
-{{HOME}}/bin/kip-music-import.sh cleanup
+{{HOME}}/bin/nas-music-import.sh cleanup
 ```
 
 **Trigger Kodi rescan:**
 ```
-{{HOME}}/bin/kip-music-import.sh rescan
+{{HOME}}/bin/nas-music-import.sh rescan
 ```
 
 **Count albums in beets DB:**
 ```
-{{HOME}}/bin/kip-music-import.sh count
+{{HOME}}/bin/nas-music-import.sh count
 ```
 
 ## Decision rules for the interactive `beet import` (for user reference)

@@ -14,7 +14,7 @@ and (when supported by the container) chapter markers per section.
 ## Command
 
 ```bash
-{{HOME}}/bin/kip-audiobook.sh <url> [flags]
+{{HOME}}/bin/article-audiobook-render.sh <url> [flags]
 ```
 
 Direct invocation (equivalent):
@@ -40,7 +40,7 @@ python3 {{HOME}}/.openclaw/workspace/skills/audiobook/audiobook.py <url> [flags]
 ## Test example
 
 ```bash
-{{HOME}}/bin/kip-audiobook.sh \
+{{HOME}}/bin/article-audiobook-render.sh \
   https://www.vatican.va/content/leo-xiv/en/encyclicals/documents/20260515-magnifica-humanitas.html
 ```
 
@@ -92,7 +92,7 @@ the Pi (CPU only, ~1×realtime on a Pi 4).
 - Swap voices for a single run by exporting `PIPER_VOICE` inline:
   ```bash
   PIPER_VOICE={{HOME}}/.local/share/piper/en_US-hfc_male-medium.onnx \
-    ~/bin/kip-audiobook.sh --provider piper <url>
+    ~/bin/article-audiobook-render.sh --provider piper <url>
   ```
 - More voices: download `<name>.onnx` + `<name>.onnx.json` from
   https://huggingface.co/rhasspy/piper-voices into `~/.local/share/piper/`.

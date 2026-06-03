@@ -10,7 +10,7 @@ Use this skill for requests about checking, logging, exporting, or reporting sta
 ## Command
 
 ```bash
-{{HOME}}/bin/kip-cloudflare-domains.sh
+{{HOME}}/bin/cloudflare-domain-monitor-runner.sh
 ```
 
 The command:
@@ -80,7 +80,7 @@ Recommended cadence: every 6 hours, staggered away from other health jobs.
 Example:
 
 ```cron
-17 */6 * * * {{HOME}}/bin/kip-cloudflare-domains.sh
+17 */6 * * * {{HOME}}/bin/cloudflare-domain-monitor-runner.sh
 ```
 
 ## Publish Decision

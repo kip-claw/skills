@@ -11,7 +11,7 @@ the latest result to kip-claw JSON data for the public stats page.
 ## Command
 
 ```
-{{HOME}}/bin/kip-speedtest.sh
+{{HOME}}/bin/network-speedtest-runner.sh
 ```
 
 ## Sheet

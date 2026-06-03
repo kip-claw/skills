@@ -8,7 +8,7 @@ description: Transcribes Telegram voice messages locally with whisper.cpp and re
 When a voice message arrives:
 
 1. Download the OGG file from Telegram to a temp path
-2. Run: `{{HOME}}/bin/transcribe_voice.sh <path_to_ogg>`
+2. Run: `{{HOME}}/bin/voice-transcription-runner.sh <path_to_ogg>`
 3. Use the stdout output as the user's text input
 4. Delete the temp OGG file after transcription
 

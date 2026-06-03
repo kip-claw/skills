@@ -11,7 +11,7 @@ Monitors for new releases of the `openclaw` npm package and notifies the user wh
 ## Command
 
 ```bash
-bash {{HOME}}/bin/kip-openclaw-release-check.sh
+bash {{HOME}}/bin/openclaw-release-checker.sh
 ```
 
 ## Exit Codes

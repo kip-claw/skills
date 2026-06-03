@@ -9,46 +9,46 @@ Ben's full Twitter/X archive for @palewire is stored and indexed on the NAS
 using [birdclaw](https://birdclaw.sh/). The archive includes tweets, likes,
 bookmarks, DMs, profiles, and follower/following edges going back over a decade.
 
-All queries run via SSH to the NAS. Use `{{HOME}}/bin/kip-birdclaw.sh`.
+All queries run via SSH to the NAS. Use `{{HOME}}/bin/twitter-archive-cli.sh`.
 
 ## Commands
 
 **Search tweets (FTS5 full-text search):**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh search tweets "query" --limit 20 --json
+{{HOME}}/bin/twitter-archive-cli.sh search tweets "query" --limit 20 --json
 ```
 
 **Search liked tweets:**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh search tweets --liked --limit 20 --json
+{{HOME}}/bin/twitter-archive-cli.sh search tweets --liked --limit 20 --json
 ```
 
 **Search bookmarked tweets:**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh search tweets --bookmarked --limit 20 --json
+{{HOME}}/bin/twitter-archive-cli.sh search tweets --bookmarked --limit 20 --json
 ```
 
 **Search DMs:**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh search dms "query" --limit 20 --json
+{{HOME}}/bin/twitter-archive-cli.sh search dms "query" --limit 20 --json
 ```
 
 **Daily digest (streaming summary of recent activity):**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh today
-{{HOME}}/bin/kip-birdclaw.sh digest week --json
+{{HOME}}/bin/twitter-archive-cli.sh today
+{{HOME}}/bin/twitter-archive-cli.sh digest week --json
 ```
 
 **Database stats:**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh db stats --json
+{{HOME}}/bin/twitter-archive-cli.sh db stats --json
 ```
 
 **Follower graph:**
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh graph summary --json
-{{HOME}}/bin/kip-birdclaw.sh graph mutuals --limit 50 --json
-{{HOME}}/bin/kip-birdclaw.sh graph top-followers --limit 20 --json
+{{HOME}}/bin/twitter-archive-cli.sh graph summary --json
+{{HOME}}/bin/twitter-archive-cli.sh graph mutuals --limit 50 --json
+{{HOME}}/bin/twitter-archive-cli.sh graph top-followers --limit 20 --json
 ```
 
 ## Architecture
@@ -65,7 +65,7 @@ All queries run via SSH to the NAS. Use `{{HOME}}/bin/kip-birdclaw.sh`.
 
 To export a Git-friendly JSONL backup:
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh backup export --repo /srv/dev-disk-by-uuid-a170c673-36d0-4a82-a615-e7356ef68cc6/Data/birdclaw/backup --commit --json
+{{HOME}}/bin/twitter-archive-cli.sh backup export --repo /srv/dev-disk-by-uuid-a170c673-36d0-4a82-a615-e7356ef68cc6/Data/birdclaw/backup --commit --json
 ```
 
 This is included in the existing `r2-sync` offsite backup automatically.
@@ -75,8 +75,8 @@ This is included in the existing `r2-sync` offsite backup automatically.
 A daily cron job exports a summary JSON for the kip-claw Twitter archive page:
 
 - **Cron:** `Twitter archive export` — runs daily at 6:00 AM ET (after sync at 5:30 AM)
-- **Wrapper:** `{{HOME}}/bin/kip-twitter-export.sh`
-- **Script:** `{{HOME}}/bin/twitter-export-kipclaw.py <json_path>`
+- **Wrapper:** `{{HOME}}/bin/twitter-archive-data-export.sh`
+- **Script:** `{{HOME}}/bin/twitter-archive-export-core.py <json_path>`
 - **Output:** `{{HOME}}/kip-claw/static/data/twitterArchive.json`
 - **Commits** changes to kip-claw and pushes to deploy
 
@@ -87,13 +87,13 @@ and produces summary stats, monthly tweet counts, and top 10 tweets by likes.
 
 If a newer archive is downloaded, transfer it to the NAS and re-import:
 ```bash
-{{HOME}}/bin/kip-nas.sh push ~/Downloads/twitter-*.zip Data/birdclaw/archive/
-{{HOME}}/bin/kip-birdclaw.sh import archive /srv/dev-disk-by-uuid-a170c673-36d0-4a82-a615-e7356ef68cc6/Data/birdclaw/archive/<filename>.zip --json
+{{HOME}}/bin/nas-storage-operations.sh push ~/Downloads/twitter-*.zip Data/birdclaw/archive/
+{{HOME}}/bin/twitter-archive-cli.sh import archive /srv/dev-disk-by-uuid-a170c673-36d0-4a82-a615-e7356ef68cc6/Data/birdclaw/archive/<filename>.zip --json
 ```
 
 Selective re-import (e.g., only refresh tweets, keep live likes):
 ```bash
-{{HOME}}/bin/kip-birdclaw.sh import archive <path>.zip --select tweets --json
+{{HOME}}/bin/twitter-archive-cli.sh import archive <path>.zip --select tweets --json
 ```
 
 ## Notes

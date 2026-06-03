@@ -6,38 +6,38 @@ description: Manages NAS storage, file transfers, disk usage checks, drive healt
 # NAS Storage
 
 The NAS runs OpenMediaVault on a Pi reachable over Tailscale as `kip-nas`.
-All storage operations go through `{{HOME}}/bin/kip-nas.sh`.
+All storage operations go through `{{HOME}}/bin/nas-storage-operations.sh`.
 
 The primary drive is the WD (UUID a170c673). The Seagate is a nightly
 rsync mirror — do not write to it directly.
 
-When asked about NAS storage, disk usage, or files, always use {{HOME}}/bin/kip-nas.sh rather than running commands like lsblk, df, or ls directly. All NAS operations go through the kip-nas.sh wrapper script.
+When asked about NAS storage, disk usage, or files, always use {{HOME}}/bin/nas-storage-operations.sh rather than running commands like lsblk, df, or ls directly. All NAS operations go through the nas-storage-operations.sh wrapper script.
 
 ## Commands
 
 **Check disk usage:**
 ```
-{{HOME}}/bin/kip-nas.sh status
+{{HOME}}/bin/nas-storage-operations.sh status
 ```
 
 **List files (storage root or a subdirectory):**
 ```
-{{HOME}}/bin/kip-nas.sh list [optional/subpath]
+{{HOME}}/bin/nas-storage-operations.sh list [optional/subpath]
 ```
 
 **Push a file or directory from Kip to NAS:**
 ```
-{{HOME}}/bin/kip-nas.sh push <local-path> [destination-subpath]
+{{HOME}}/bin/nas-storage-operations.sh push <local-path> [destination-subpath]
 ```
 
 **Pull a file or directory from NAS to Kip:**
 ```
-{{HOME}}/bin/kip-nas.sh pull <nas-subpath> [local-destination]
+{{HOME}}/bin/nas-storage-operations.sh pull <nas-subpath> [local-destination]
 ```
 
 **Check SMART health on all drives:**
 ```
-{{HOME}}/bin/kip-nas.sh health
+{{HOME}}/bin/nas-storage-operations.sh health
 ```
 
 Interpret SMART output as follows:
@@ -50,7 +50,7 @@ When SMART is unavailable, include the reason in summaries (for example: `smartc
 
 **Sync Google Drive to NAS:**
 ```
-{{HOME}}/bin/kip-nas.sh sync
+{{HOME}}/bin/nas-storage-operations.sh sync
 ```
 
 The Google Drive sync uses rclone on the NAS (configured under the
@@ -76,7 +76,7 @@ script (see below).
 Photos from Google Takeout are synced from the laptop to the NAS using:
 
 ```
-{{HOME}}/bin/kip-photos-sync.py sync
+{{HOME}}/bin/nas-photos-sync.py sync
 ```
 
 The script mounts the laptop's Takeout folder via sshfs, then rsyncs year
@@ -90,12 +90,12 @@ folders (2005–2026) and 67 named albums to the NAS Photos directory at
 
 **Commands:**
 ```
-kip-photos-sync.py mount       — mount laptop Takeout via sshfs
-kip-photos-sync.py plan        — show what would be synced (dry run)
-kip-photos-sync.py sync        — sync all years + albums
-kip-photos-sync.py sync-years  — sync only year folders
-kip-photos-sync.py sync-albums — sync only named albums
-kip-photos-sync.py unmount     — unmount when done
+nas-photos-sync.py mount       — mount laptop Takeout via sshfs
+nas-photos-sync.py plan        — show what would be synced (dry run)
+nas-photos-sync.py sync        — sync all years + albums
+nas-photos-sync.py sync-years  — sync only year folders
+nas-photos-sync.py sync-albums — sync only named albums
+nas-photos-sync.py unmount     — unmount when done
 ```
 
 The sync is incremental (rsync) — safe to re-run if interrupted. Typical

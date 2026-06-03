@@ -34,7 +34,7 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 
 2. **Chartbeat top story** — Fetch the #1 story using the chartbeat skill:
    ```bash
-   {{HOME}}/bin/kip-chartbeat.sh stories 1
+   {{HOME}}/bin/chartbeat-top-stories.sh stories 1
    ```
    Extract just the headline and wrap it in quotes with a hyperlink over the entire headline text.
 
