@@ -9,8 +9,10 @@ manifest on success:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +25,7 @@ ENV_FILE = HOME / ".openclaw/.env"
 AUDIOBOOK_WRAPPER = HOME / "bin/article-audiobook-render.sh"
 CHARTBEAT_HOST = "reuters.com"
 CHARTBEAT_LIMIT_DEFAULT = 5
+STAGING_ROOT = WORKSPACE / "tmp"
 
 
 def _load_env_file(path: Path) -> None:
@@ -65,6 +68,16 @@ def _slugify(text: str) -> str:
     while "--" in slug:
         slug = slug.replace("--", "-")
     return slug.strip("-") or "story"
+
+
+def _stage_for_telegram(source: str, rank: int, title: str, run_date: str) -> str:
+    """Copy a generated audiobook under the workspace so Telegram can attach it."""
+    source_path = Path(source)
+    stage_dir = STAGING_ROOT / f"chartbeat-audiobooks-{run_date}"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    dest = stage_dir / f"{rank:02d}-{_slugify(title)[:64]}.mp3"
+    shutil.copy2(source_path, dest)
+    return str(dest)
 
 
 def _fetch_chartbeat_pages(limit: int, host: str, api_key: str) -> list[dict[str, Any]]:
@@ -186,6 +199,8 @@ def main() -> int:
     env = os.environ.copy()
     stories: list[dict[str, Any]] = []
     files: list[str] = []
+    originals: list[str] = []
+    run_date = datetime.now().astimezone().date().isoformat()
 
     for idx, page in enumerate(pages, start=1):
         title = page.get("title") or "(no title)"
@@ -208,9 +223,18 @@ def main() -> int:
         }
         stories.append(story)
         if not story["failed"] and story["path"]:
-            files.append(str(story["path"]))
+            originals.append(str(story["path"]))
+            try:
+                staged_path = _stage_for_telegram(str(story["path"]), idx, title, run_date)
+            except Exception as exc:  # noqa: BLE001
+                story["failed"] = True
+                story["error"] = f"telegram staging failed: {exc}"
+                continue
+            story["original_path"] = story["path"]
+            story["path"] = staged_path
+            files.append(staged_path)
 
-    manifest = {"files": files, "stories": stories}
+    manifest = {"files": files, "original_files": originals, "stories": stories}
     print(json.dumps(manifest, ensure_ascii=True))
     return 0
 
