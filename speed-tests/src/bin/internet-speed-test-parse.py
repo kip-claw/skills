@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys, json
 d = json.load(sys.stdin)
 download = round(d['download'] / 1_000_000, 2)

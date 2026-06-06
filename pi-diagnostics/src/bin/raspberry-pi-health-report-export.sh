@@ -1,5 +1,7 @@
 #!/bin/bash
 # Collect Pi hardware health metrics, log to Google Sheet, and export to kip-claw JSON.
+set -euo pipefail
+
 source {{HOME}}/.openclaw/.env
 if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
   export GOG_KEYRING_PASSWORD
@@ -10,12 +12,12 @@ export PATH="/usr/local/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 DIAG_SHEET_ID="1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/src/lib/piHealth.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/src/lib/piHealth.json"
 LOG="/tmp/kip-pi-health.log"
 SCRIPT_START=$(date +%s)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-pi-health" "$?" "$DURATION" ""' EXIT
+trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-pi-health" "$?" "$DURATION" "${CRON_NOTES:-}"' EXIT
 
 echo "[$TIMESTAMP] Collecting Pi health metrics..." >> "$LOG"
 
@@ -68,12 +70,33 @@ python3 {{HOME}}/bin/pi-health-export-core.py \
 if [ $? -ne 0 ]; then
   echo "[$TIMESTAMP] Warning: failed to export JSON for kip-claw" >> "$LOG"
 fi
-
-git -C {{HOME}}/kip-claw add src/lib/piHealth.json
-git -C {{HOME}}/kip-claw diff --cached --quiet || (
-  git -C {{HOME}}/kip-claw commit -m "chore: update pi health data" &&
-  timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main &&
-  timeout 120s git -C {{HOME}}/kip-claw push origin main
-)
+# Ensure Prettier formatting compliance
+if command -v npx &>/dev/null; then
+  if ! npx --yes prettier --write "$KIP_CLAW_JSON" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Warning: prettier formatting failed for pi health JSON" >> "$LOG"
+  fi
+fi
+git -C {{HOME}}/Code/kip-claw add src/lib/piHealth.json
+if git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+  CRON_NOTES="no changes"
+  echo "[$TIMESTAMP] No pi health changes to commit" >> "$LOG"
+else
+  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update pi health data" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git commit for pi health data" >> "$LOG"
+    CRON_NOTES="failed: commit"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git pull --rebase for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: pull"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git push for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: push"
+    exit 1
+  fi
+  CRON_NOTES="updated"
+fi
 
 echo "[$TIMESTAMP] Pi health logged — CPU: ${CPU_TEMP}°C, GPU: ${GPU_TEMP}°C, Load: ${LOAD1}" >> "$LOG"

@@ -1,5 +1,7 @@
 #!/bin/bash
 # Snapshot OpenClaw cron job statuses to Google Sheet and kip-claw JSON.
+set -euo pipefail
+
 source {{HOME}}/.openclaw/.env
 if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
   export GOG_KEYRING_PASSWORD
@@ -10,12 +12,12 @@ export PATH="/usr/local/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 DIAG_SHEET_ID="1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/src/lib/openclawJobs.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/src/lib/openclawJobs.json"
 LOG="/tmp/kip-openclaw-jobs.log"
 SCRIPT_START=$(date +%s)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-openclaw-jobs" "$?" "$DURATION" ""' EXIT
+trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-openclaw-jobs" "$?" "$DURATION" "${CRON_NOTES:-}"' EXIT
 
 echo "[$TIMESTAMP] Collecting OpenClaw job statuses..." >> "$LOG"
 
@@ -38,11 +40,27 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-git -C {{HOME}}/kip-claw add src/lib/openclawJobs.json
-git -C {{HOME}}/kip-claw diff --cached --quiet || (
-  git -C {{HOME}}/kip-claw commit -m "chore: update openclaw jobs data" &&
-  timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main &&
-  timeout 120s git -C {{HOME}}/kip-claw push origin main
-)
+git -C {{HOME}}/Code/kip-claw add src/lib/openclawJobs.json
+if git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+  CRON_NOTES="no changes"
+  echo "[$TIMESTAMP] No openclaw jobs changes to commit" >> "$LOG"
+else
+  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update openclaw jobs data" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git commit for openclaw jobs data" >> "$LOG"
+    CRON_NOTES="failed: commit"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git pull --rebase for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: pull"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git push for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: push"
+    exit 1
+  fi
+  CRON_NOTES="updated"
+fi
 
 echo "[$TIMESTAMP] OpenClaw jobs logged" >> "$LOG"

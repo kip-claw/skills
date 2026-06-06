@@ -12,10 +12,19 @@ export XDG_CONFIG_HOME="{{HOME}}/.config"
 export GIT_TERMINAL_PROMPT=0
 export PATH="/usr/local/bin:/usr/bin:/bin"
 
+LOCKFILE="/tmp/kip-cloudflare-domains.lock"
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+  DATE=$(date '+%Y-%m-%d %H:%M:%S')
+  echo "[$DATE] Skipped: another cloudflare-domain-check run is already in progress" >> "{{HOME}}/.openclaw/logs/kip-cloudflare-domains.log"
+  CRON_NOTES="skipped: already running"
+  exit 0
+fi
+
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 SHEET_ID="${CLOUDFLARE_DOMAINS_SHEET_ID:-}"
 SHEET_RANGE="Checks!A:P"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/static/data/cloudflareDomains.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/cloudflareDomains.json"
 VALUES_JSON="/tmp/kip-cloudflare-domains-values.json"
 SUMMARY_JSON="/tmp/kip-cloudflare-domains-summary.json"
 LOG="{{HOME}}/.openclaw/logs/kip-cloudflare-domains.log"
@@ -58,20 +67,20 @@ else
   echo "[$DATE] CLOUDFLARE_DOMAINS_SHEET_ID is not set; skipped Google Sheet append" >> "$LOG"
 fi
 
-git -C {{HOME}}/kip-claw add static/data/cloudflareDomains.json
+git -C {{HOME}}/Code/kip-claw add static/data/cloudflareDomains.json
 
-if ! git -C {{HOME}}/kip-claw diff --cached --quiet; then
-  if ! git -C {{HOME}}/kip-claw commit -m "chore: update cloudflare domain data" >> "$LOG" 2>&1; then
+if ! git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update cloudflare domain data" >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git commit for cloudflareDomains.json" >> "$LOG"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git pull --rebase for kip-claw" >> "$LOG"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/kip-claw push origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git push origin main for kip-claw" >> "$LOG"
     exit 1
   fi

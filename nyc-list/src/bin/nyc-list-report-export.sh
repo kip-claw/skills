@@ -1,7 +1,9 @@
 #!/bin/bash
 # Snapshot NYC list Google Sheet data to kip-claw JSON with geocoding.
+set -euo pipefail
+
 SCRIPT_START=$(date +%s)
-trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-nyc-list" "$?" "$DURATION" ""' EXIT
+trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-nyc-list" "$?" "$DURATION" "${CRON_NOTES:-}"' EXIT
 
 source {{HOME}}/.openclaw/.env
 if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
@@ -17,8 +19,8 @@ export GIT_TERMINAL_PROMPT=0
 
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 NYC_SHEET_ID="1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/static/data/nycList.json"
-GEOCACHE="{{HOME}}/kip-claw/src/lib/nyc-geocache.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/nycList.json"
+GEOCACHE="{{HOME}}/Code/kip-claw/src/lib/nyc-geocache.json"
 LOG="/tmp/kip-nyc-list.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -40,12 +42,37 @@ if [ $? -ne 0 ]; then
   echo "[$TIMESTAMP] Failed to export NYC list data" >> "$LOG"
   exit 1
 fi
+# Ensure Prettier formatting compliance for generated JSON files
+if command -v npx &>/dev/null; then
+  if ! npx --yes prettier --write "$KIP_CLAW_JSON" "$GEOCACHE" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Warning: prettier formatting failed for NYC list JSON" >> "$LOG"
+  fi
+fi
+git -C {{HOME}}/Code/kip-claw add static/data/nycList.json src/lib/nyc-geocache.json
 
-git -C {{HOME}}/kip-claw add static/data/nycList.json src/lib/nyc-geocache.json
-git -C {{HOME}}/kip-claw diff --cached --quiet || (
-  git -C {{HOME}}/kip-claw commit -m "chore: update nyc list data" &&
-  timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main &&
-  timeout 120s git -C {{HOME}}/kip-claw push origin main
-)
+if git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+  CRON_NOTES="no changes"
+  echo "[$TIMESTAMP] No nyc list changes to commit" >> "$LOG"
+else
+  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update nyc list data" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git commit for nyc list data" >> "$LOG"
+    CRON_NOTES="failed: commit"
+    exit 1
+  fi
+
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git pull --rebase for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: pull"
+    exit 1
+  fi
+
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git push for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: push"
+    exit 1
+  fi
+
+  CRON_NOTES="updated"
+fi
 
 echo "[$TIMESTAMP] NYC list data exported" >> "$LOG"

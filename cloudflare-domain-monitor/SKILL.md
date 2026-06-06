@@ -1,11 +1,11 @@
 ---
 name: cloudflare-domain-monitor
-description: Monitor Ben's Cloudflare-managed domains, log DNS/ping/HTTPS/TLS status to Google Sheets, and update kip-claw domain status JSON for a public app tracker.
+description: Monitor Ben's internet domains (Cloudflare-managed plus manual external domains), log DNS/ping/HTTPS/TLS status to Google Sheets, and update kip-claw domain status JSON for a public app tracker.
 ---
 
-# Cloudflare Domain Monitor
+# Domain Monitor (Cloudflare + External)
 
-Use this skill for requests about checking, logging, exporting, or reporting status for Ben's Cloudflare-managed domains.
+Use this skill for requests about checking, logging, exporting, or reporting status for Ben's monitored domains.
 
 ## Command
 
@@ -16,14 +16,20 @@ Use this skill for requests about checking, logging, exporting, or reporting sta
 The command:
 
 - Lists Cloudflare zones using `CLOUDFLARE_API_TOKEN`.
+- Loads extra non-Cloudflare domains from:
+
+```bash
+{{HOME}}/.openclaw/workspace/skills/cloudflare-domain-monitor/config/manual-domains.json
+```
+
 - Checks each apex domain with public network probes:
   - DNS resolution
   - ICMP ping reachability and average latency
   - HTTPS status code, response time, final URL, and remote IP
   - TLS certificate expiration days
 - Appends rows to the Google Sheet configured in `CLOUDFLARE_DOMAINS_SHEET_ID`.
-- Updates `{{HOME}}/kip-claw/static/data/cloudflareDomains.json`.
-- Commits and pushes the JSON update in `{{HOME}}/kip-claw`.
+- Updates `{{HOME}}/Code/kip-claw/static/data/cloudflareDomains.json`.
+- Commits and pushes the JSON update in `{{HOME}}/Code/kip-claw`.
 
 ## Sheet
 
@@ -52,7 +58,7 @@ CLOUDFLARE_DOMAINS_SHEET_ID="1w0AuMDNvXJx7KanhlXE7tr1RVQS6Z32-_F3qX80YqII"
 The public JSON file is:
 
 ```bash
-{{HOME}}/kip-claw/static/data/cloudflareDomains.json
+{{HOME}}/Code/kip-claw/static/data/cloudflareDomains.json
 ```
 
 Shape:
@@ -61,6 +67,11 @@ Shape:
 - `summary`: total domains, ok domains, warning domains, failing domains
 - `domains`: latest check per domain
 - `history`: recent historical checks, capped by the collector
+
+Each row also includes:
+
+- `source`: `cloudflare` or `manual`
+- `provider`: provider hint (for example `cloudflare`, `namecheap`)
 
 ## Reporting
 

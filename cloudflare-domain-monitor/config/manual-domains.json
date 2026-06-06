@@ -1,0 +1,24 @@
+{
+  "domains": [
+    {
+      "domain": "api.archive.ire.org",
+      "provider": "external"
+    },
+    {
+      "domain": "archive.ire.org",
+      "provider": "external"
+    },
+    {
+      "domain": "admin.archive.ire.org",
+      "provider": "external"
+    },
+    {
+      "url": "https://www.amsat.org/amateur-satellite-index",
+      "provider": "external"
+    },
+    {
+      "url": "https://www.amsat.org/status/",
+      "provider": "external"
+    }
+  ]
+}

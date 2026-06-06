@@ -3,7 +3,6 @@
 import json
 import os
 import sys
-from datetime import datetime
 
 FIELDS = [
     "timestamp", "cpuTempC", "gpuTempC",
@@ -46,6 +45,7 @@ def main() -> int:
 
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2)
+        f.write("\n")
 
     return 0
 

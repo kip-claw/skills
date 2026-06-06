@@ -25,14 +25,14 @@ Columns: Timestamp, Download (Mbps), Upload (Mbps), Ping (ms), Server, Provider
 
 After a successful run, the wrapper also updates:
 
-- `{{HOME}}/kip-claw/static/data/speedTests.json`
+- `{{HOME}}/Code/kip-claw/static/data/speedTests.json`
 
 This file is the public data source used by kip-claw stats components.
 
 ## After Running
 
 Report the results back to the user — download speed, upload speed, and ping.
-Commit and push the JSON change in`{{HOME}}/kip-claw`.
+Commit and push the JSON change in`{{HOME}}/Code/kip-claw`.
 If the user asks how it compares to recent tests, read the last few rows from the sheet using `gog --no-input -a "$GOG_ACCOUNT" sheets` and summarize the trend.
 
 ## Notes

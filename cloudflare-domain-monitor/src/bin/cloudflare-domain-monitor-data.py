@@ -14,6 +14,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -38,6 +39,8 @@ HEADERS = [
     "Remote IP",
     "Error",
 ]
+
+MANUAL_DOMAINS_ENV = "DOMAIN_MONITOR_MANUAL_DOMAINS_PATH"
 
 
 def utc_now() -> datetime:
@@ -77,6 +80,70 @@ def list_zones(token: str) -> list[dict[str, Any]]:
     return sorted(zones, key=lambda z: z.get("name", ""))
 
 
+def default_manual_domains_path() -> Path:
+    # script path: <skill-root>/src/bin/cloudflare-domain-monitor-data.py
+    return Path(__file__).resolve().parents[2] / "config" / "manual-domains.json"
+
+
+def load_manual_domains(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"invalid manual domains file {path}: {exc}") from exc
+
+    raw_domains = data.get("domains", []) if isinstance(data, dict) else []
+    if not isinstance(raw_domains, list):
+        raise RuntimeError(f"manual domains file {path} has invalid 'domains' list")
+
+    loaded: list[dict[str, str]] = []
+    for raw in raw_domains:
+        if not isinstance(raw, dict):
+            continue
+        provider = str(raw.get("provider", "external")).strip().lower() or "external"
+
+        raw_url = str(raw.get("url", "")).strip()
+        raw_domain = str(raw.get("domain", "")).strip().lower()
+
+        if raw_url:
+            candidate = raw_url if "://" in raw_url else f"https://{raw_url}"
+            parsed = urlparse(candidate)
+            host = (parsed.hostname or "").strip().lower()
+            if not host:
+                continue
+            path_part = parsed.path or "/"
+            query_part = f"?{parsed.query}" if parsed.query else ""
+            target = f"https://{host}{path_part}{query_part}"
+            label = str(raw.get("label", "")).strip() or target
+            loaded.append(
+                {
+                    "domain": host,
+                    "provider": provider,
+                    "target": target,
+                    "label": label,
+                }
+            )
+            continue
+
+        if not raw_domain:
+            continue
+
+        target = f"https://{raw_domain}/"
+        label = str(raw.get("label", "")).strip() or raw_domain
+        loaded.append(
+            {
+                "domain": raw_domain,
+                "provider": provider,
+                "target": target,
+                "label": label,
+            }
+        )
+
+    return loaded
+
+
 def dns_check(domain: str) -> tuple[bool, list[str], str]:
     try:
         infos = socket.getaddrinfo(domain, 443, type=socket.SOCK_STREAM)
@@ -106,7 +173,7 @@ def ping_check(domain: str) -> tuple[bool, float | None, str]:
     return False, avg, "ping failed"
 
 
-def https_check(domain: str) -> tuple[bool, int | None, float | None, str, str, str]:
+def https_check(target_url: str) -> tuple[bool, int | None, float | None, str, str, str]:
     write_out = "\t".join(
         ["%{http_code}", "%{time_total}", "%{url_effective}", "%{remote_ip}", "%{ssl_verify_result}"]
     )
@@ -123,7 +190,7 @@ def https_check(domain: str) -> tuple[bool, int | None, float | None, str, str, 
                 "20",
                 "--write-out",
                 write_out,
-                f"https://{domain}/",
+                target_url,
             ],
             text=True,
             capture_output=True,
@@ -177,7 +244,8 @@ def tls_days_left(domain: str) -> tuple[int | None, str]:
 
 
 def status_for(row: dict[str, Any]) -> str:
-    if row["zoneStatus"] != "active" or row["paused"]:
+    source = row.get("source", "cloudflare")
+    if source == "cloudflare" and (row["zoneStatus"] != "active" or row["paused"]):
         return "fail"
     if not row["dnsOk"] or not row["httpsOk"]:
         return "fail"
@@ -190,8 +258,18 @@ def status_for(row: dict[str, Any]) -> str:
     return "ok"
 
 
-def collect_domain(timestamp: str, zone: dict[str, Any]) -> dict[str, Any]:
-    domain = zone.get("name", "")
+def collect_domain(
+    timestamp: str,
+    *,
+    domain: str,
+    target: str,
+    label: str,
+    source: str,
+    provider: str,
+    zone_status: str,
+    paused: bool,
+    plan: str,
+) -> dict[str, Any]:
     errors: list[str] = []
     dns_ok, ips, dns_error = dns_check(domain)
     if dns_error:
@@ -201,7 +279,7 @@ def collect_domain(timestamp: str, zone: dict[str, Any]) -> dict[str, Any]:
     if ping_error:
         errors.append(f"ping: {ping_error}")
 
-    https_ok, http_status, response_ms, final_url, remote_ip, https_error = https_check(domain)
+    https_ok, http_status, response_ms, final_url, remote_ip, https_error = https_check(target)
     if https_error:
         errors.append(f"https: {https_error}")
 
@@ -212,9 +290,13 @@ def collect_domain(timestamp: str, zone: dict[str, Any]) -> dict[str, Any]:
     row = {
         "timestamp": timestamp,
         "domain": domain,
-        "zoneStatus": zone.get("status", ""),
-        "paused": bool(zone.get("paused", False)),
-        "plan": ((zone.get("plan") or {}).get("name") or ""),
+        "target": target,
+        "label": label,
+        "source": source,
+        "provider": provider,
+        "zoneStatus": zone_status,
+        "paused": paused,
+        "plan": plan,
         "dnsOk": dns_ok,
         "ips": ips,
         "pingOk": ping_ok,
@@ -231,8 +313,40 @@ def collect_domain(timestamp: str, zone: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+def collect_cloudflare_domain(timestamp: str, zone: dict[str, Any]) -> dict[str, Any]:
+    domain = str(zone.get("name", "")).strip().lower()
+    return collect_domain(
+        timestamp,
+        domain=domain,
+        target=f"https://{domain}/",
+        label=domain,
+        source="cloudflare",
+        provider="cloudflare",
+        zone_status=str(zone.get("status", "")),
+        paused=bool(zone.get("paused", False)),
+        plan=((zone.get("plan") or {}).get("name") or ""),
+    )
+
+
+def collect_manual_domain(timestamp: str, entry: dict[str, str]) -> dict[str, Any]:
+    return collect_domain(
+        timestamp,
+        domain=entry["domain"],
+        target=entry["target"],
+        label=entry.get("label", entry["target"]),
+        source="manual",
+        provider=entry["provider"],
+        zone_status="external",
+        paused=False,
+        plan=entry["provider"],
+    )
+
+
 def row_key(row: dict[str, Any]) -> str:
-    return f"{row.get('timestamp')}|{row.get('domain')}"
+    return (
+        f"{row.get('timestamp')}|{row.get('source', 'cloudflare')}|"
+        f"{row.get('target') or row.get('domain')}"
+    )
 
 
 def load_existing(path: Path) -> list[dict[str, Any]]:
@@ -272,7 +386,7 @@ def values_json(latest: list[dict[str, Any]]) -> list[list[Any]]:
         rows.append(
             [
                 row["timestamp"],
-                row["domain"],
+                row.get("target") or row["domain"],
                 row["zoneStatus"],
                 row["paused"],
                 row["plan"],
@@ -298,23 +412,49 @@ def main() -> int:
     parser.add_argument("--values-json-path", required=True)
     parser.add_argument("--summary-path", required=True)
     parser.add_argument("--max-history", type=int, default=2000)
+    parser.add_argument("--manual-domains-path")
     args = parser.parse_args()
 
     token = os.environ.get("CLOUDFLARE_API_TOKEN")
-    if not token:
-        print("CLOUDFLARE_API_TOKEN is not set", file=sys.stderr)
+
+    manual_path = Path(
+        args.manual_domains_path
+        or os.environ.get(MANUAL_DOMAINS_ENV, "")
+        or str(default_manual_domains_path())
+    )
+    manual_domains = load_manual_domains(manual_path)
+
+    zones: list[dict[str, Any]] = []
+    if token:
+        zones = list_zones(token)
+    elif not manual_domains:
+        print(
+            "CLOUDFLARE_API_TOKEN is not set and no manual domains were found",
+            file=sys.stderr,
+        )
         return 2
 
     timestamp = isoformat(utc_now())
-    zones = list_zones(token)
-    latest = [collect_domain(timestamp, zone) for zone in zones]
+    latest: list[dict[str, Any]] = [collect_cloudflare_domain(timestamp, zone) for zone in zones]
+
+    seen_targets = {row.get("target", "") for row in latest}
+    for entry in manual_domains:
+        target = entry.get("target", "")
+        if target and target in seen_targets:
+            continue
+        latest.append(collect_manual_domain(timestamp, entry))
+        if target:
+            seen_targets.add(target)
 
     json_path = Path(args.json_path)
     existing = load_existing(json_path)
     keyed = {row_key(row): row for row in existing}
     for row in latest:
         keyed[row_key(row)] = row
-    history = sorted(keyed.values(), key=lambda row: (row.get("timestamp", ""), row.get("domain", "")))
+    history = sorted(
+        keyed.values(),
+        key=lambda row: (row.get("timestamp", ""), row.get("target", row.get("domain", ""))),
+    )
     if len(history) > args.max_history:
         history = history[-args.max_history :]
 

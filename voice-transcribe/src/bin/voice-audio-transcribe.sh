@@ -4,8 +4,8 @@
 
 set -eo pipefail
 
-WHISPER_BIN="{{HOME}}/whisper.cpp/build/bin/whisper-cli"
-WHISPER_MODEL="{{HOME}}/whisper.cpp/models/ggml-base.en-q5_0.bin"
+WHISPER_BIN="{{HOME}}/Code/whisper.cpp/build/bin/whisper-cli"
+WHISPER_MODEL="{{HOME}}/Code/whisper.cpp/models/ggml-base.en-q5_0.bin"
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 INPUT="$1"

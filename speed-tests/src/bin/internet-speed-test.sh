@@ -12,7 +12,7 @@ SHEET_ID="1_YH3KLAGSNzATkSUf9UEtFYhgA5s_R7IV-CFC_fye-s"
 export GOG_KEYRING_PASSWORD="${GOG_KEYRING_PASSWORD}"
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 SHEET_RANGE="Sheet1!A:F"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/static/data/speedTests.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/speedTests.json"
 LOG="/var/log/kip-speedtest.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -27,6 +27,11 @@ fi
 
 PARSED=$(echo "$RESULT" | python3 {{HOME}}/bin/network-speedtest-parse-core.py)
 IFS='|' read -r DOWNLOAD UPLOAD PING SERVER SPONSOR <<< "$PARSED"
+
+if [ -z "${DOWNLOAD:-}" ] || [ -z "${UPLOAD:-}" ] || [ -z "${PING:-}" ]; then
+  echo "[$DATE] Failed: could not parse speed test output" >> "$LOG"
+  exit 1
+fi
 
 AUTH_LIST=$(gog --no-input auth list --plain 2>>"$LOG")
 if [ $? -ne 0 ]; then
@@ -52,20 +57,20 @@ if [ $? -eq 0 ]; then
     exit 1
   fi
 
-  git -C {{HOME}}/kip-claw add static/data/speedTests.json
+  git -C {{HOME}}/Code/kip-claw add static/data/speedTests.json
 
-  if ! git -C {{HOME}}/kip-claw diff --cached --quiet; then
-    if ! git -C {{HOME}}/kip-claw commit -m "chore: update speed test data" >> "$LOG" 2>&1; then
+  if ! git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+    if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update speed test data" >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git commit for speedTests.json" >> "$LOG"
       exit 1
     fi
 
-    if ! timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git pull --rebase for kip-claw" >> "$LOG"
       exit 1
     fi
 
-    if ! timeout 120s git -C {{HOME}}/kip-claw push origin main >> "$LOG" 2>&1; then
+    if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git push origin main for kip-claw" >> "$LOG"
       exit 1
     fi

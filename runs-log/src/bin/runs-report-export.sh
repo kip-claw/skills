@@ -1,7 +1,9 @@
 #!/bin/bash
 # Snapshot runs log Google Sheet data to kip-claw JSON.
+set -euo pipefail
+
 SCRIPT_START=$(date +%s)
-trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-runs" "$?" "$DURATION" ""' EXIT
+trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-runs" "$?" "$DURATION" "${CRON_NOTES:-}"' EXIT
 
 source {{HOME}}/.openclaw/.env
 if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
@@ -14,7 +16,7 @@ export GIT_TERMINAL_PROMPT=0
 
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 RUNS_SHEET_ID="1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA"
-KIP_CLAW_JSON="{{HOME}}/kip-claw/static/data/runs.json"
+KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/runs.json"
 LOG="/tmp/kip-runs.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -36,11 +38,27 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-git -C {{HOME}}/kip-claw add static/data/runs.json
-git -C {{HOME}}/kip-claw diff --cached --quiet || (
-  git -C {{HOME}}/kip-claw commit -m "chore: update runs data" &&
-  timeout 120s git -C {{HOME}}/kip-claw pull --rebase --autostash origin main &&
-  timeout 120s git -C {{HOME}}/kip-claw push origin main
-)
+git -C {{HOME}}/Code/kip-claw add static/data/runs.json
+if git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+  CRON_NOTES="no changes"
+  echo "[$TIMESTAMP] No runs changes to commit" >> "$LOG"
+else
+  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update runs data" >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git commit for runs data" >> "$LOG"
+    CRON_NOTES="failed: commit"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git pull --rebase for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: pull"
+    exit 1
+  fi
+  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: git push for kip-claw" >> "$LOG"
+    CRON_NOTES="failed: push"
+    exit 1
+  fi
+  CRON_NOTES="updated"
+fi
 
 echo "[$TIMESTAMP] Runs data exported" >> "$LOG"
