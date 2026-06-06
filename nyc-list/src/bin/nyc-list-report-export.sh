@@ -21,6 +21,8 @@ GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 NYC_SHEET_ID="1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ"
 KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/nycList.json"
 GEOCACHE="{{HOME}}/Code/kip-claw/src/lib/nyc-geocache.json"
+KIP_CLAW_REPO="{{HOME}}/Code/kip-claw"
+PRETTIER="$KIP_CLAW_REPO/node_modules/.bin/prettier"
 LOG="/tmp/kip-nyc-list.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -43,30 +45,38 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 # Ensure Prettier formatting compliance for generated JSON files
-if command -v npx &>/dev/null; then
-  if ! npx --yes prettier --write "$KIP_CLAW_JSON" "$GEOCACHE" >> "$LOG" 2>&1; then
-    echo "[$TIMESTAMP] Warning: prettier formatting failed for NYC list JSON" >> "$LOG"
-  fi
+if [ ! -x "$PRETTIER" ]; then
+  echo "[$TIMESTAMP] Failed: repo-local Prettier is unavailable at $PRETTIER" >> "$LOG"
+  CRON_NOTES="failed: prettier unavailable"
+  exit 1
 fi
-git -C {{HOME}}/Code/kip-claw add static/data/nycList.json src/lib/nyc-geocache.json
+if ! (
+  cd "$KIP_CLAW_REPO"
+  "$PRETTIER" --write static/data/nycList.json src/lib/nyc-geocache.json
+) >> "$LOG" 2>&1; then
+  echo "[$TIMESTAMP] Failed: prettier formatting for NYC list data" >> "$LOG"
+  CRON_NOTES="failed: prettier"
+  exit 1
+fi
+git -C "$KIP_CLAW_REPO" add static/data/nycList.json src/lib/nyc-geocache.json
 
-if git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
+if git -C "$KIP_CLAW_REPO" diff --cached --quiet; then
   CRON_NOTES="no changes"
   echo "[$TIMESTAMP] No nyc list changes to commit" >> "$LOG"
 else
-  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update nyc list data" >> "$LOG" 2>&1; then
+  if ! git -C "$KIP_CLAW_REPO" commit --no-verify -m "chore: update nyc list data" >> "$LOG" 2>&1; then
     echo "[$TIMESTAMP] Failed: git commit for nyc list data" >> "$LOG"
     CRON_NOTES="failed: commit"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C "$KIP_CLAW_REPO" pull --rebase --autostash origin main >> "$LOG" 2>&1; then
     echo "[$TIMESTAMP] Failed: git pull --rebase for kip-claw" >> "$LOG"
     CRON_NOTES="failed: pull"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C "$KIP_CLAW_REPO" push origin main >> "$LOG" 2>&1; then
     echo "[$TIMESTAMP] Failed: git push for kip-claw" >> "$LOG"
     CRON_NOTES="failed: push"
     exit 1

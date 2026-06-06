@@ -12,7 +12,9 @@ SHEET_ID="1_YH3KLAGSNzATkSUf9UEtFYhgA5s_R7IV-CFC_fye-s"
 export GOG_KEYRING_PASSWORD="${GOG_KEYRING_PASSWORD}"
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 SHEET_RANGE="Sheet1!A:F"
-KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/speedTests.json"
+KIP_CLAW_REPO="{{HOME}}/Code/kip-claw"
+KIP_CLAW_JSON="$KIP_CLAW_REPO/static/data/speedTests.json"
+PRETTIER="$KIP_CLAW_REPO/node_modules/.bin/prettier"
 LOG="/var/log/kip-speedtest.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -57,20 +59,33 @@ if [ $? -eq 0 ]; then
     exit 1
   fi
 
-  git -C {{HOME}}/Code/kip-claw add static/data/speedTests.json
+  if [ ! -x "$PRETTIER" ]; then
+    echo "[$DATE] Failed: repo-local Prettier is unavailable at $PRETTIER" >> "$LOG"
+    exit 1
+  fi
 
-  if ! git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
-    if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update speed test data" >> "$LOG" 2>&1; then
+  if ! (
+    cd "$KIP_CLAW_REPO"
+    "$PRETTIER" --write static/data/speedTests.json
+  ) >> "$LOG" 2>&1; then
+    echo "[$DATE] Failed: prettier formatting for speedTests.json" >> "$LOG"
+    exit 1
+  fi
+
+  git -C "$KIP_CLAW_REPO" add static/data/speedTests.json
+
+  if ! git -C "$KIP_CLAW_REPO" diff --cached --quiet; then
+    if ! git -C "$KIP_CLAW_REPO" commit --no-verify -m "chore: update speed test data" >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git commit for speedTests.json" >> "$LOG"
       exit 1
     fi
 
-    if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+    if ! timeout 120s git -C "$KIP_CLAW_REPO" pull --rebase --autostash origin main >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git pull --rebase for kip-claw" >> "$LOG"
       exit 1
     fi
 
-    if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+    if ! timeout 120s git -C "$KIP_CLAW_REPO" push origin main >> "$LOG" 2>&1; then
       echo "[$DATE] Failed: git push origin main for kip-claw" >> "$LOG"
       exit 1
     fi

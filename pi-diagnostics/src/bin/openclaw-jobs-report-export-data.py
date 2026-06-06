@@ -19,18 +19,18 @@ def main() -> int:
 
     with open(jobs_path, "r", encoding="utf-8") as f:
         jobs_raw = json.load(f)
-    with open(state_path, "r", encoding="utf-8") as f:
-        state_raw = json.load(f)
-
     jobs_by_id = {j["id"]: j for j in jobs_raw.get("jobs", [])}
-    states = state_raw.get("jobs", {})
+    states = {}
+    if os.path.exists(state_path):
+        with open(state_path, "r", encoding="utf-8") as f:
+            state_raw = json.load(f)
+        states = state_raw.get("jobs", {})
 
     new_rows = []
-    for job_id, state_obj in states.items():
-        if job_id not in jobs_by_id:
-            continue
+    for job_id, job in jobs_by_id.items():
+        state_obj = states.get(job_id, job)
         s = state_obj.get("state", {})
-        name = jobs_by_id[job_id]["name"]
+        name = job["name"]
         status = s.get("lastRunStatus", "")
         duration_s = round(s.get("lastDurationMs", 0) / 1000, 1)
         consec_errors = s.get("consecutiveErrors", 0)

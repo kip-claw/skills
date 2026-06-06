@@ -6,6 +6,7 @@ set -eo pipefail
 
 WHISPER_BIN="{{HOME}}/Code/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL="{{HOME}}/Code/whisper.cpp/models/ggml-base.en-q5_0.bin"
+export LD_LIBRARY_PATH="{{HOME}}/Code/whisper.cpp/build/src:{{HOME}}/Code/whisper.cpp/build/ggml/src${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 INPUT="$1"

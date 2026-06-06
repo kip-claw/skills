@@ -24,7 +24,9 @@ fi
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 SHEET_ID="${CLOUDFLARE_DOMAINS_SHEET_ID:-}"
 SHEET_RANGE="Checks!A:P"
-KIP_CLAW_JSON="{{HOME}}/Code/kip-claw/static/data/cloudflareDomains.json"
+KIP_CLAW_REPO="{{HOME}}/Code/kip-claw"
+KIP_CLAW_JSON="$KIP_CLAW_REPO/static/data/cloudflareDomains.json"
+PRETTIER="$KIP_CLAW_REPO/node_modules/.bin/prettier"
 VALUES_JSON="/tmp/kip-cloudflare-domains-values.json"
 SUMMARY_JSON="/tmp/kip-cloudflare-domains-summary.json"
 LOG="{{HOME}}/.openclaw/logs/kip-cloudflare-domains.log"
@@ -67,20 +69,35 @@ else
   echo "[$DATE] CLOUDFLARE_DOMAINS_SHEET_ID is not set; skipped Google Sheet append" >> "$LOG"
 fi
 
-git -C {{HOME}}/Code/kip-claw add static/data/cloudflareDomains.json
+if [ ! -x "$PRETTIER" ]; then
+  echo "[$DATE] Failed: repo-local Prettier is unavailable at $PRETTIER" >> "$LOG"
+  CRON_NOTES="failed: prettier unavailable"
+  exit 1
+fi
 
-if ! git -C {{HOME}}/Code/kip-claw diff --cached --quiet; then
-  if ! git -C {{HOME}}/Code/kip-claw commit --no-verify -m "chore: update cloudflare domain data" >> "$LOG" 2>&1; then
+if ! (
+  cd "$KIP_CLAW_REPO"
+  "$PRETTIER" --write static/data/cloudflareDomains.json
+) >> "$LOG" 2>&1; then
+  echo "[$DATE] Failed: prettier formatting for cloudflareDomains.json" >> "$LOG"
+  CRON_NOTES="failed: prettier"
+  exit 1
+fi
+
+git -C "$KIP_CLAW_REPO" add static/data/cloudflareDomains.json
+
+if ! git -C "$KIP_CLAW_REPO" diff --cached --quiet; then
+  if ! git -C "$KIP_CLAW_REPO" commit --no-verify -m "chore: update cloudflare domain data" >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git commit for cloudflareDomains.json" >> "$LOG"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/Code/kip-claw pull --rebase --autostash origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C "$KIP_CLAW_REPO" pull --rebase --autostash origin main >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git pull --rebase for kip-claw" >> "$LOG"
     exit 1
   fi
 
-  if ! timeout 120s git -C {{HOME}}/Code/kip-claw push origin main >> "$LOG" 2>&1; then
+  if ! timeout 120s git -C "$KIP_CLAW_REPO" push origin main >> "$LOG" 2>&1; then
     echo "[$DATE] Failed: git push origin main for kip-claw" >> "$LOG"
     exit 1
   fi
