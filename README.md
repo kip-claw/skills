@@ -1,29 +1,6 @@
 # Skills
 
-Public collection of personal OpenClaw skills, published automatically from a local private workspace.
-
-## Included Skills
-
-- `cigar-humidor`
-- `geocoder`
-- `homepage-charts`
-- `movie-list`
-- `music-import`
-- `nas-storage`
-- `nyc-list`
-- `obsidian-vault`
-- `pi-diagnostics`
-- `reading-list`
-- `runs-log`
-- `speed-tests`
-- `todo-archival`
-- `tv-control`
-- `voice-transcribe`
-
-## Excluded From Public Publish
-
-- Plugin skills (`browser-automation`, `wiki-maintainer`, `obsidian-vault-maintainer`)
-- Email/calendar skills (`imap-smtp-email`, `caldav-calendar`)
+Public collection of personal OpenClaw skills used by [kip.computer](https://kip.computer), published automatically from a local private workspace.
 
 ## Publishing Model
 
