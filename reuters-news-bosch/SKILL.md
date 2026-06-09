@@ -26,7 +26,9 @@ OpenClaw image generation tool for the image.
 2. Read `chartbeat.json` and `direction.json`. Stop if the snapshot contains
    fewer than five stories.
 3. Derive 3-6 themes. Weight high-ranked stories and reader counts, but treat
-   counts only as a timestamped attention signal.
+   counts only as a timestamped attention signal. Write them to `themes.json`
+   using the `file_write` tool (never a shell heredoc such as `cat <<EOF`,
+   which forces a manual approval prompt).
 4. Build a panoramic three-part allegory using every field in the creative
    direction card:
    - Left: origins, causes, institutions, or promises.
@@ -37,11 +39,14 @@ OpenClaw image generation tool for the image.
      narrative motion.
    - Avoid every item in `avoidRecentMotifs` unless today's reporting makes it
      uniquely necessary. If reused, explain why in `themes.json`.
-5. Write the exact assembled prompt to `prompt.txt`. Include this instruction:
+5. Write the exact assembled prompt to `prompt.txt` with the `file_write` tool
+   (never a shell heredoc). Include this instruction:
    "Invent a fresh symbolic vocabulary for this edition. Do not default to
    familiar editorial symbols when the direction card offers a less literal
    metaphor."
-6. Generate one `16:9` landscape image with the OpenClaw image tool. Use an
+6. Generate one `16:9` landscape image with the OpenClaw image tool. Call
+   `image_generate` **without a `model` argument** so it uses the configured
+   default image model (never pass a bare `google/...` ref). Use an
    intricate Northern Renaissance oil-painting aesthetic inspired by
    Hieronymus Bosch and triptych composition, while creating original symbols
    and scenes. No copied artwork, Reuters marks, logos, embedded text,
