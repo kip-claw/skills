@@ -6,70 +6,55 @@ description: "Generate sourced Bosch-inspired editorial images from Reuters Char
 # Reuters News Bosch
 
 Generate a review-only daily news allegory from Reuters Chartbeat's most-read
-stories. Use `scripts/chartbeat_snapshot.py` for source capture and the
-OpenClaw image generation tool for the image.
+stories. The pipeline is deterministic and runs unattended from a single
+orchestrator script; only publishing to the public site requires human review.
 
 ## Generate
 
-1. Create a dated run directory:
+The whole generation pipeline runs from one allowlisted orchestrator:
 
-   ```bash
-   RUN_DIR="${HOME}/.openclaw/workspace/tmp/reuters-news-bosch/$(date +%F-%H%M%S)"
-   mkdir -p "$RUN_DIR"
-   python scripts/chartbeat_snapshot.py --limit 10 --output "$RUN_DIR/chartbeat.json"
-   python scripts/direction_card.py \
-     --date "$(date +%F)" \
-     --runs-root "${HOME}/.openclaw/workspace/tmp/reuters-news-bosch" \
-     --output "$RUN_DIR/direction.json"
-   ```
+```bash
+{{HOME}}/bin/reuters-news-bosch-cron.sh
+```
 
-2. Read `chartbeat.json` and `direction.json`. Stop if the snapshot contains
-   fewer than five stories.
-3. Derive 3-6 themes. Weight high-ranked stories and reader counts, but treat
-   counts only as a timestamped attention signal. Write them to `themes.json`
-   using the `file_write` tool (never a shell heredoc such as `cat <<EOF`,
-   which forces a manual approval prompt).
-4. Build a panoramic three-part allegory using every field in the creative
-   direction card:
-   - Left: origins, causes, institutions, or promises.
-   - Center: the activity and conflict drawing the most attention.
-   - Right: aftermath, risks, warnings, or unresolved futures.
-   - Prefer the selected symbol families and character archetypes.
-   - Follow the selected composition, atmosphere, palette, scale, and
-     narrative motion.
-   - Avoid every item in `avoidRecentMotifs` unless today's reporting makes it
-     uniquely necessary. If reused, explain why in `themes.json`.
-5. Write the exact assembled prompt to `prompt.txt` with the `file_write` tool
-   (never a shell heredoc). Include this instruction:
-   "Invent a fresh symbolic vocabulary for this edition. Do not default to
-   familiar editorial symbols when the direction card offers a less literal
-   metaphor."
-6. Generate one `16:9` landscape image with the OpenClaw image tool. Call
-   `image_generate` **without a `model` argument** so it uses the configured
-   default image model (never pass a bare `google/...` ref). Use an
-   intricate Northern Renaissance oil-painting aesthetic inspired by
-   Hieronymus Bosch and triptych composition, while creating original symbols
-   and scenes. No copied artwork, Reuters marks, logos, embedded text,
-   photorealistic news imagery, or graphic gore.
-7. Save the final image as `image.png` in the run directory.
-8. Create the remaining artifacts with:
+It performs these discrete, individually testable steps and writes everything
+into a dated run directory under
+`${HOME}/.openclaw/workspace/tmp/reuters-news-bosch/`:
 
-   ```bash
-   python scripts/build_manifest.py \
-     --run-dir "$RUN_DIR" \
-     --prompt-file "$RUN_DIR/prompt.txt" \
-     --themes-file "$RUN_DIR/themes.json" \
-     --direction-file "$RUN_DIR/direction.json" \
-     --alt-file "$RUN_DIR/alt.txt" \
-     --caption-file "$RUN_DIR/caption.md"
-   ```
+1. `scripts/chartbeat_snapshot.py --limit 10` — immutable ranked source
+   snapshot (`chartbeat.json`). Stops if fewer than five suitable stories.
+2. `scripts/direction_card.py --date <today> --runs-root <root>` — deterministic,
+   date-seeded creative direction (`direction.json`), including
+   `avoidRecentMotifs` derived from recent manifests.
+3. `scripts/derive_themes.py` — derives 3-6 themes (`themes.json`) plus a
+   `themes-meta.json` sidecar. Themes come from the **configured default model**
+   via `openclaw infer model run --json` (no `--model`, so it follows config).
+   The response is strictly validated: every theme must cite at least one real
+   story rank. If the model is throttled, unavailable, or returns invalid output,
+   it falls back to a **deterministic, content-aware rule-based deriver** so the
+   edition always ships. `themeSource` records `model` or `fallback`.
+4. `scripts/compose_edition.py` — deterministic assembly of `prompt.txt`,
+   `alt.txt`, and `caption.md` from the snapshot, direction card, and themes.
+   The prompt builds a panoramic three-part allegory (left: origins/causes;
+   center: the central conflict; right: aftermath/risks), honors the direction
+   card, avoids `avoidRecentMotifs`, and instructs the model to invent a fresh
+   symbolic vocabulary.
+5. Image generation — `openclaw infer image generate --model openai/gpt-image-2`
+   (OpenAI only, `--size 1536x1024`, `--timeout-ms 900000`) with up to three
+   retries. `scripts/select_image.py` normalizes the output to `image.png` and
+   fails hard on an empty or missing image.
+6. `scripts/build_manifest.py --meta-file themes-meta.json` — writes
+   `manifest.json` (provenance, `themeSource`, `motifsUsed`) and `preview.md`.
+   Recording `motifsUsed` re-enables motif repetition control for future runs.
+7. Telegram delivery — sends the image preview for review. On any failure the
+   orchestrator sends a concise Telegram failure notice and logs to
+   `${HOME}/.openclaw/logs/kip-reuters-news-bosch.log`.
 
-9. Inspect `image.png`. Verify it is a wide triptych, contains no legible text
-   or logos, avoids documentary realism and graphic injury, and visibly
-   represents each declared theme and the direction card. Compare it with the
-   most recent image when available. Regenerate once with a targeted correction
-   if the visual vocabulary is too similar.
-10. Present the image and `preview.md` for review.
+To review, open the image and `preview.md` in the run directory. Verify it is a
+wide triptych, contains no legible text or logos, avoids documentary realism and
+graphic injury, and visibly represents each declared theme and the direction
+card. Publishing is a separate, explicit step (below).
+
 
 ## Publish
 
@@ -106,7 +91,9 @@ Each run directory contains:
 - `direction.json`: deterministic daily creative direction and recent motifs
   to avoid.
 - `themes.json`: theme names, interpretations, and supporting story ranks.
+- `themes-meta.json`: theme provenance (`themeSource`, model, motifs).
 - `prompt.txt`: exact image prompt.
+- `image-result.json`: raw image generation result envelope.
 - `image.png`: generated artwork.
 - `alt.txt`: visible composition description.
 - `caption.md`: short disclosure and source-oriented caption.

@@ -29,6 +29,22 @@ def main() -> int:
         help="Concrete motif visible in the reviewed image; repeat as needed.",
     )
     parser.add_argument("--provider", default="openclaw image_generate")
+    parser.add_argument(
+        "--theme-source",
+        default="unknown",
+        help="How themes were derived: 'model' or 'fallback'.",
+    )
+    parser.add_argument(
+        "--theme-model",
+        default=None,
+        help="Model that produced the themes, when source is 'model'.",
+    )
+    parser.add_argument(
+        "--meta-file",
+        type=Path,
+        default=None,
+        help="themes-meta.json with themeSource, model, and motifs; overrides flags when present.",
+    )
     args = parser.parse_args()
 
     source_path = args.run_dir / "chartbeat.json"
@@ -50,6 +66,17 @@ def main() -> int:
     source = read_json(source_path)
     themes = read_json(args.themes_file)
     direction = read_json(args.direction_file)
+
+    theme_source = args.theme_source
+    theme_model = args.theme_model
+    motifs = list(args.motif)
+    if args.meta_file and args.meta_file.exists():
+        meta = read_json(args.meta_file)
+        theme_source = meta.get("themeSource", theme_source)
+        theme_model = meta.get("model", theme_model)
+        if not motifs:
+            motifs = [str(item) for item in meta.get("motifs", [])]
+
     ranks = {story["rank"] for story in source["stories"]}
     for theme in themes:
         cited = set(theme.get("storyRanks", []))
@@ -66,13 +93,15 @@ def main() -> int:
             "of Reuters stories drawing the most concurrent readers."
         ),
         "imageProvider": args.provider,
+        "themeSource": theme_source,
+        "themeModel": theme_model,
         "sourceSnapshot": "chartbeat.json",
         "sourceRetrievedAt": source["retrievedAt"],
         "metric": source["metric"],
         "storyCount": len(source["stories"]),
         "themes": themes,
         "creativeDirection": direction,
-        "motifsUsed": sorted(set(args.motif)),
+        "motifsUsed": sorted(set(motifs)),
         "prompt": args.prompt_file.read_text(encoding="utf-8").strip(),
         "artifacts": {
             "image": "image.png",
