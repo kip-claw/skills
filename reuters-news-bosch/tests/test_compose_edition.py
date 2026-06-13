@@ -89,6 +89,31 @@ class ComposeEditionTests(unittest.TestCase):
             for name in ("prompt.txt", "alt.txt", "caption.md"):
                 self.assertTrue((root / name).exists())
 
+    def test_main_injects_headline_motifs(self) -> None:
+        import sys
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = _setup(Path(directory))
+            (root / "themes-meta.json").write_text(
+                json.dumps(
+                    {
+                        "themeSource": "fallback",
+                        "motifs": ["a listing vessel taking on dark water"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            argv = sys.argv
+            sys.argv = ["compose_edition.py", "--run-dir", str(root)]
+            try:
+                rc = compose_edition.main()
+            finally:
+                sys.argv = argv
+            self.assertEqual(rc, 0)
+            prompt = (root / "prompt.txt").read_text(encoding="utf-8")
+            self.assertIn("a listing vessel taking on dark water", prompt)
+            self.assertIn("Concrete motifs drawn from today's specific headlines", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

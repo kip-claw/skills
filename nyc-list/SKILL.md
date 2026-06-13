@@ -27,7 +27,7 @@ Columns: `name`, `address`, `is_decent`, `is_recommended`, `is_elite`, `is_close
 
 When adding new entries:
 1. Add the new place to the sheet
-2. Sort the entire list alphabetically by the `name` column
+2. Sort the entire list alphabetically by the `name` column with `{{HOME}}/bin/nyc-list-sort.sh`
 3. The sheet should remain in alphabetical order at all times
 
 ## Commands
@@ -56,6 +56,12 @@ Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filt
 gog --no-input -a "$GOG_ACCOUNT" sheets update 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!C10" \
   --values-json '[["Y"]]' \
   --input USER_ENTERED
+```
+
+### Sort the list
+
+```bash
+{{HOME}}/bin/nyc-list-sort.sh
 ```
 
 ## Workflow Rules

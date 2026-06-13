@@ -75,19 +75,179 @@ GENERIC_THEMES = [
     ),
 ]
 
-MOTIF_NOUNS = [
-    "grafted orchard",
-    "spiral bridge",
-    "tilted scales",
-    "clockwork procession",
-    "flooded market",
-    "broken loom",
-    "eclipsed tower",
-    "masked assembly",
-    "overturned vessel",
-    "burning ledger",
-    "migrating flock",
-    "labyrinth stair",
+# Stopwords for the rare noun-extraction backstop (see _concrete_noun_motifs).
+STOPWORDS = {
+    "the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "for", "with",
+    "as", "at", "by", "from", "into", "over", "under", "after", "before", "amid",
+    "against", "near", "off", "out", "up", "down", "about", "than", "then",
+    "this", "that", "these", "those", "their", "its", "it", "is", "are", "was",
+    "were", "be", "been", "has", "have", "had", "will", "would", "can", "could",
+    "may", "might", "new", "old", "top", "more", "most", "first", "last", "next",
+    "says", "say", "said", "tells", "told", "set", "sets", "make", "makes",
+    "made", "take", "takes", "took", "weighs", "clash", "clashes", "swing",
+    "decided", "maps", "rises", "rise", "rose", "fall", "falls", "fell", "warn",
+    "warns", "hits", "hit", "plans", "plan", "urges", "backs", "faces", "looms",
+    "grips", "batters", "spreads", "swallows", "ruins", "deploys", "surge",
+    "surges", "dramatic", "landmark", "final", "study",
+}
+
+# Concrete, symbolic motifs keyed by topical words that appear in headlines.
+# Selection is content-driven: a motif can only be chosen when one of its
+# trigger words is present in the day's stories, so the fallback always
+# reflects the news. Multiple phrasings per topic keep recurring subjects from
+# looking identical day to day; the date seed only picks among the phrasings.
+MOTIF_LEXICON: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
+    (  # armed conflict
+        ("war", "wars", "missile", "missiles", "strike", "strikes", "airstrike",
+         "shelling", "troops", "soldier", "soldiers", "army", "military", "drone",
+         "drones", "battle", "siege", "combat", "offensive", "front", "warplane"),
+        (
+            "a breached stone rampart beneath drifting smoke",
+            "a field of toppled banners and broken spears",
+            "a stalled siege engine facing a shut gate",
+        ),
+    ),
+    (  # maritime
+        ("navy", "naval", "ship", "ships", "vessel", "vessels", "tanker", "tankers",
+         "fleet", "boat", "boats", "port", "harbor", "harbour", "strait", "sea",
+         "maritime", "shipping", "submarine"),
+        (
+            "a listing vessel taking on dark water",
+            "a narrow strait crowded with looming hulls",
+            "an overturned boat among whispering reeds",
+        ),
+    ),
+    (  # courts / law
+        ("court", "courts", "trial", "judge", "judges", "ruling", "rulings",
+         "verdict", "lawsuit", "lawsuits", "justice", "legal", "charges", "appeal",
+         "indictment", "prosecutor", "sentence", "tribunal"),
+        (
+            "a pair of tilted brass scales above a crowd",
+            "a sealed verdict scroll passed hand to hand",
+            "a stone gavel frozen mid-fall",
+        ),
+    ),
+    (  # elections / governance
+        ("election", "elections", "vote", "votes", "ballot", "ballots", "campaign",
+         "poll", "polls", "parliament", "senate", "congress", "referendum",
+         "candidate", "voters"),
+        (
+            "a slow procession bearing sealed ballot urns",
+            "an empty speaking platform under bright bunting",
+            "a forest of raised hollow hands",
+        ),
+    ),
+    (  # markets / economy
+        ("market", "markets", "stocks", "shares", "trade", "trading", "tariff",
+         "tariffs", "economy", "inflation", "debt", "bank", "banks", "finance",
+         "dollar", "rate", "rates", "bonds", "recession", "growth"),
+        (
+            "a teetering tower of leather ledgers",
+            "scales weighing gold coins against bushels of grain",
+            "a great cracked coin half-sunk in mud",
+        ),
+    ),
+    (  # energy / oil
+        ("oil", "gas", "fuel", "fuels", "pipeline", "pipelines", "refinery",
+         "petrol", "crude", "energy", "power", "grid", "barrel", "barrels"),
+        (
+            "a guttering oil lamp bleeding black smoke",
+            "a cracked pipeline coiling like a sleeping serpent",
+            "a lone derrick burning at the horizon",
+        ),
+    ),
+    (  # floods / storms
+        ("flood", "floods", "flooding", "storm", "storms", "hurricane", "rain",
+         "rains", "cyclone", "typhoon", "monsoon", "tide", "tides", "deluge"),
+        (
+            "a drowned marketplace beneath rising water",
+            "a single spire standing above the floodline",
+            "a broken levee giving way in silence",
+        ),
+    ),
+    (  # fire / drought / heat
+        ("fire", "fires", "wildfire", "wildfires", "blaze", "burn", "burns",
+         "burning", "drought", "heat", "heatwave", "smoke"),
+        (
+            "an advancing wall of slow embers",
+            "a parched riverbed splitting into broken tiles",
+            "a scorched orchard of black branching trees",
+        ),
+    ),
+    (  # disease / health
+        ("disease", "virus", "viruses", "outbreak", "health", "hospital",
+         "hospitals", "vaccine", "vaccines", "pandemic", "infection", "flu",
+         "measles", "patients"),
+        (
+            "a masked procession of lantern-bearing physicians",
+            "a quarantine lantern glowing in grey fog",
+            "a bandaged figure tending many narrow cots",
+        ),
+    ),
+    (  # climate / environment
+        ("climate", "carbon", "emissions", "warming", "glacier", "glaciers", "ice",
+         "environment", "ecosystem", "wildlife", "forest", "forests", "extinction"),
+        (
+            "a melting glacial throne dripping into dusk",
+            "a tall smokestack exhaling a private storm",
+            "a withering globe cradled in bare hands",
+        ),
+    ),
+    (  # space / launch
+        ("space", "rocket", "rockets", "satellite", "satellites", "launch",
+         "orbit", "mars", "moon", "lunar", "spacecraft", "astronaut"),
+        (
+            "a fragile ladder climbing into a starless night",
+            "a falling star caught in a fisherman's net",
+            "an astrolabe of cracked and clouded glass",
+        ),
+    ),
+    (  # technology / AI
+        ("ai", "tech", "chip", "chips", "data", "robot", "robots", "software",
+         "cyber", "algorithm", "computing", "semiconductor", "internet"),
+        (
+            "a clockwork scribe sprouting too many arms",
+            "a loom weaving threads of cold light",
+            "a mirror-faced automaton holding a quill",
+        ),
+    ),
+    (  # labor / protest
+        ("union", "unions", "workers", "labor", "labour", "protest", "protests",
+         "march", "marches", "riot", "riots", "unrest", "rally", "picket"),
+        (
+            "a tide of faceless marchers filling a square",
+            "a toppled factory wheel half-buried in ash",
+            "a great banner stitched without a single word",
+        ),
+    ),
+    (  # migration / borders
+        ("border", "borders", "migrant", "migrants", "refugee", "refugees",
+         "asylum", "deportation", "immigration", "frontier", "crossing"),
+        (
+            "a long line crossing a broken boundary wall",
+            "bundles carried in single file over cold ground",
+            "a tall gate hung with many keys and no lock",
+        ),
+    ),
+    (  # sport / spectacle
+        ("sport", "sports", "olympic", "olympics", "soccer", "football", "tennis",
+         "match", "matches", "cup", "championship", "game", "games", "league",
+         "tournament"),
+        (
+            "a gilded trophy balanced on an unsteady plinth",
+            "a stadium reimagined as a colosseum of masks",
+            "a laurel wreath hung above rows of empty seats",
+        ),
+    ),
+    (  # crime / policing
+        ("crime", "police", "shooting", "shootings", "murder", "arrest", "arrests",
+         "violence", "gun", "guns", "gang", "homicide", "robbery"),
+        (
+            "a chalk outline ringed by scattered petals",
+            "a cracked town bell that can no longer ring",
+            "a single lantern searching a narrow alley",
+        ),
+    ),
 ]
 
 
@@ -112,7 +272,9 @@ def build_prompt(stories: list[dict], direction: dict) -> str:
         '  "name": short title (3-6 words),\n'
         '  "interpretation": one sentence on what it means,\n'
         '  "storyRanks": array of integers, each an existing rank,\n'
-        '  "motifs": array of 1-2 concrete, original visual nouns.\n\n'
+        '  "motifs": array of 1-2 concrete, original visual nouns, each encoding '
+        "a specific detail from a cited story (an object, place-type, number, or "
+        'action) rendered symbolically, never a brand, logo, or real person.\n\n'
         f"Valid ranks: {ranks}. Every storyRanks entry MUST be one of these. "
         "Each theme must cite at least one rank. Weight higher-ranked stories "
         "more, but treat reader counts only as a timestamped attention signal.\n\n"
@@ -200,12 +362,69 @@ def validate_themes(themes: list[dict], valid_ranks: set[int]) -> tuple[list[dic
     return normalized, list(dict.fromkeys(motifs))
 
 
+def _title_words(text: str) -> list[str]:
+    return re.findall(r"[A-Za-z][A-Za-z'\-]+", text)
+
+
+def _concrete_noun_motifs(stories: list[dict], rng: random.Random) -> list[str]:
+    """Last-resort motifs pulled directly from headline nouns (rarely reached)."""
+    picks: list[str] = []
+    for story in stories:
+        for raw in _title_words(story.get("title", "")):
+            low = raw.lower()
+            if len(low) < 4 or low in STOPWORDS or raw[0].isupper():
+                continue
+            if low not in picks:
+                picks.append(low)
+            if len(picks) >= 3:
+                break
+        if len(picks) >= 3:
+            break
+    templates = (
+        "a solitary {n} raised like an emblem",
+        "a great {n} half-swallowed by climbing vines",
+        "a {n} suspended in still grey air",
+    )
+    motifs = [templates[rng.randrange(len(templates))].format(n=noun) for noun in picks]
+    return motifs or ["a veiled figure paused at a stone threshold"]
+
+
+def headline_motifs(stories: list[dict], run_date: str) -> list[str]:
+    """Derive concrete visual motifs strictly from the day's headlines.
+
+    Each motif is anchored to a topic word that actually appears in a story, so
+    the deterministic fallback can never drift into news-agnostic imagery. The
+    date seed only varies the phrasing of a matched topic, never whether the
+    topic itself is present.
+    """
+    seed = int(hashlib.sha256(("motifs:" + run_date).encode("ascii")).hexdigest()[:16], 16)
+    rng = random.Random(seed)
+    motifs: list[str] = []
+    used: set[int] = set()
+    for story in stories:
+        text = " ".join([story.get("title", "")] + list(story.get("sections", []) or []))
+        words = {word.lower() for word in _title_words(text)}
+        best_idx, best_hits = -1, 0
+        for idx, (triggers, _phrasings) in enumerate(MOTIF_LEXICON):
+            if idx in used:
+                continue
+            hits = sum(1 for trigger in triggers if trigger in words)
+            if hits > best_hits:
+                best_idx, best_hits = idx, hits
+        if best_idx >= 0:
+            phrasings = MOTIF_LEXICON[best_idx][1]
+            motifs.append(phrasings[rng.randrange(len(phrasings))])
+            used.add(best_idx)
+        if len(motifs) >= 3:
+            break
+    if not motifs:
+        motifs = _concrete_noun_motifs(stories, rng)
+    return list(dict.fromkeys(motifs))[:3]
+
+
 def fallback_themes(
     stories: list[dict], run_date: str
 ) -> tuple[list[dict], list[str]]:
-    seed = int(hashlib.sha256(run_date.encode("ascii")).hexdigest()[:16], 16)
-    rng = random.Random(seed)
-
     matched: dict[str, dict] = {}
     for story in stories:
         haystack = " ".join(
@@ -236,7 +455,7 @@ def fallback_themes(
         )
 
     themes = themes[:MAX_THEMES]
-    motifs = rng.sample(MOTIF_NOUNS, k=min(3, len(MOTIF_NOUNS)))
+    motifs = headline_motifs(stories, run_date)
     return themes, motifs
 
 

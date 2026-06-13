@@ -31,13 +31,26 @@ def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def build_prompt(stories: list[dict], direction: dict, themes: list[dict]) -> str:
+def build_prompt(
+    stories: list[dict],
+    direction: dict,
+    themes: list[dict],
+    motifs: list[str] | None = None,
+) -> str:
     story_lines = "\n".join(
         f"- Rank {s['rank']}: {s['title']} ({s.get('readers', 0)} readers)"
         for s in stories[:5]
     )
     theme_lines = "\n".join(
         f"- {t['name']}: {t['interpretation']}" for t in themes
+    )
+    motif_lines = "\n".join(f"- {m}" for m in (motifs or []))
+    motif_block = (
+        "Concrete motifs drawn from today's specific headlines - make each one "
+        "visible and central, rendered as symbolic allegory rather than literal "
+        f"reportage:\n{motif_lines}\n\n"
+        if motif_lines
+        else ""
     )
     avoid = direction.get("avoidRecentMotifs") or []
     avoid_line = (
@@ -58,6 +71,7 @@ def build_prompt(stories: list[dict], direction: dict, themes: list[dict]) -> st
         f"- Characters: {', '.join(direction.get('characters', []))}\n"
         f"- Symbol families: {', '.join(direction.get('symbolFamilies', []))}\n\n"
         f"Themes to embody:\n{theme_lines}\n\n"
+        f"{motif_block}"
         f"Use these Reuters attention signals as allegorical inputs:\n"
         f"{story_lines}\n\n"
         "Triptych structure:\n"
@@ -82,12 +96,14 @@ def main() -> int:
     parser.add_argument("--chartbeat", type=Path)
     parser.add_argument("--direction", type=Path)
     parser.add_argument("--themes", type=Path)
+    parser.add_argument("--themes-meta", type=Path)
     args = parser.parse_args()
 
     run_dir = args.run_dir
     chartbeat_path = args.chartbeat or run_dir / "chartbeat.json"
     direction_path = args.direction or run_dir / "direction.json"
     themes_path = args.themes or run_dir / "themes.json"
+    themes_meta_path = args.themes_meta or run_dir / "themes-meta.json"
 
     missing = [str(p) for p in (chartbeat_path, direction_path, themes_path) if not p.exists()]
     if missing:
@@ -97,12 +113,16 @@ def main() -> int:
     snapshot = read_json(chartbeat_path)
     direction = read_json(direction_path)
     themes = read_json(themes_path)
+    motifs: list[str] = []
+    if themes_meta_path.exists():
+        meta = read_json(themes_meta_path)
+        motifs = [str(item) for item in (meta.get("motifs") or [])]
     stories = snapshot.get("stories", [])
     if len(stories) < 5:
         print("Need at least five stories in the snapshot", file=sys.stderr)
         return 1
 
-    prompt = build_prompt(stories, direction, themes)
+    prompt = build_prompt(stories, direction, themes, motifs)
     (run_dir / "prompt.txt").write_text(prompt.strip() + "\n", encoding="utf-8")
     (run_dir / "alt.txt").write_text(ALT_TEXT + "\n", encoding="utf-8")
     (run_dir / "caption.md").write_text(DISCLOSURE + "\n", encoding="utf-8")

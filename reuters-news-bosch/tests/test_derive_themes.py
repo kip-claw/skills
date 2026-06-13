@@ -83,6 +83,36 @@ class FallbackTests(unittest.TestCase):
             self.assertTrue(theme["storyRanks"])
             self.assertTrue(set(theme["storyRanks"]) <= valid)
 
+    def test_fallback_motifs_track_headline_content(self) -> None:
+        war = [
+            {"rank": 1, "title": "Missile strike hits border city", "readers": 900, "sections": ["world"]},
+            {"rank": 2, "title": "Troops clash near front line", "readers": 800, "sections": ["world"]},
+            {"rank": 3, "title": "Navy fleet deploys to strait", "readers": 700, "sections": ["world"]},
+            {"rank": 4, "title": "Oil prices surge on supply fear", "readers": 600, "sections": ["business"]},
+            {"rank": 5, "title": "Markets fall on war jitters", "readers": 500, "sections": ["markets"]},
+        ]
+        weather = [
+            {"rank": 1, "title": "Flood swallows river town", "readers": 900, "sections": ["science"]},
+            {"rank": 2, "title": "Wildfire spreads through dry hills", "readers": 800, "sections": ["science"]},
+            {"rank": 3, "title": "Drought ruins the season harvest", "readers": 700, "sections": ["science"]},
+            {"rank": 4, "title": "Vaccine slows measles outbreak", "readers": 600, "sections": ["health"]},
+            {"rank": 5, "title": "Glacier ice retreats further", "readers": 500, "sections": ["climate"]},
+        ]
+        _, war_motifs = derive_themes.fallback_themes(war, "2026-06-09")
+        _, weather_motifs = derive_themes.fallback_themes(weather, "2026-06-09")
+        self.assertTrue(war_motifs)
+        self.assertTrue(weather_motifs)
+        # Different headlines must yield different motifs (content-driven).
+        self.assertNotEqual(set(war_motifs), set(weather_motifs))
+        # No motif may come from a fixed, news-agnostic pool: every motif here
+        # must trace to a topic actually present in that day's stories.
+        self.assertTrue(
+            any("vessel" in m or "strait" in m or "rampart" in m for m in war_motifs)
+        )
+        self.assertTrue(
+            any("water" in m or "ember" in m or "riverbed" in m for m in weather_motifs)
+        )
+
     def test_main_force_fallback_writes_themes_and_meta(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
