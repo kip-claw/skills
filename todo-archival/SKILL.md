@@ -1,6 +1,8 @@
 ---
 name: todo-archival
-description: Move checked items in Todo.md's `## Done` section into the `## Since Last Digest` buffer. The buffer stays in Todo.md until the news-apps-digest skill (or Ben) sweeps it to Archive/Done-Items.md after a digest is sent.
+title: Todo Cleanup
+description: Moves completed to-do items into an archive buffer for the next digest.
+tag: Work
 ---
 
 # Todo Archival

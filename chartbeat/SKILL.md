@@ -1,6 +1,7 @@
 ---
 name: chartbeat
-description: Fetches real-time top headlines and traffic data from Chartbeat for reuters.com.
+description: Pulls real-time top headlines and traffic data from Chartbeat for reuters.com.
+tag: Work
 ---
 
 # Chartbeat

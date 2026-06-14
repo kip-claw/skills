@@ -1,6 +1,7 @@
 ---
 name: milkdrop
-description: Render a MilkDrop/Butterchurn audio visualization video from an audio/video file or a YouTube/audio URL, then send the MP4 back to the user. Use when someone shares audio or a link and asks for a visualizer, music video, milkdrop, or trippy visualization.
+description: Renders a MilkDrop visualization video from an audio file or link.
+tag: Media
 metadata: {"openclaw": {"emoji": "🌀", "requires": {"bins": ["node", "ffmpeg", "ffprobe", "yt-dlp"]}}}
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: cloudflare-domain-monitor
-description: Monitor Ben's internet domains (Cloudflare-managed plus manual external domains), log DNS/ping/HTTPS/TLS status to Google Sheets, and update kip-claw domain status JSON for a public app tracker.
+description: Monitors Ben's domains and logs their DNS, ping, HTTPS, and TLS status.
+tag: Monitoring
 ---
 
 # Domain Monitor (Cloudflare + External)

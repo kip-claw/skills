@@ -1,6 +1,7 @@
 ---
 name: cigar-humidor
-description: Log humidity readings, Boveda pack changes, and cigar additions to Ben's humidor Google Sheets. Use when asked to log humidity, add cigars, update humidor readings, or record Boveda pack changes.
+description: Logs humidity readings, Boveda pack changes, and new cigars to Ben's humidor spreadsheet.
+tag: Lists
 metadata: {"openclaw": {"emoji": "🫘", "requires": {"bins": ["gog"]}}}
 ---
 

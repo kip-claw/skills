@@ -1,6 +1,7 @@
 ---
 name: pi-diagnostics
-description: Query, review, or run Pi and OpenClaw diagnostics. Use when asked about Pi health, system temperatures, disk usage, cron job status, OpenClaw job history, or OpenClaw config snapshots.
+description: Reports Raspberry Pi health, temperatures, disk usage, and cron job status.
+tag: Monitoring
 metadata: {"openclaw": {"emoji": "🖥️", "requires": {"bins": ["gog"]}}}
 ---
 

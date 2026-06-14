@@ -1,6 +1,8 @@
 ---
 name: runs-log
-description: Update Ben's runs log in Google Sheets. Use when asked to add a run or log date, distance, route description, and reflections for a workout.
+title: Running Log
+description: Records the date, distance, route, and reflections from Ben's runs.
+tag: Lists
 metadata: {"openclaw": {"emoji": "🏃", "requires": {"bins": ["gog"]}}}
 ---
 

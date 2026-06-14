@@ -1,9 +1,7 @@
 ---
 name: web-archive
-description: >
-  Archives a URL to the local ArchiveBox instance on the NAS. Use when the
-  user asks to "save", "archive", "preserve", or "capture" a web page or
-  URL. Also use when saving sources, references, or articles for later.
+description: Saves a web page to the local ArchiveBox instance on the NAS.
+tag: Work
 ---
 
 # Web Archive

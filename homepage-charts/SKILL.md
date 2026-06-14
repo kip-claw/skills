@@ -1,6 +1,7 @@
 ---
 name: homepage-charts
-description: Log Reuters homepage chart appearances to Ben's Google Sheet. Use when asked to add a homepage chart entry, log a chart that made the reuters.com homepage, or record a homepage graphic.
+description: Logs the graphics that reach the Reuters homepage to Ben's spreadsheet.
+tag: Work
 metadata: {"openclaw": {"emoji": "📊", "requires": {"bins": ["gog"]}}}
 ---
 

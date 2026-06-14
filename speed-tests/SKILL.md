@@ -1,6 +1,7 @@
 ---
 name: speed-test
-description: Runs an internet speed test, logs to Google Sheets, and updates kip-claw speedTests.json for public stats.
+description: Runs an internet speed test and logs the results for the public stats page.
+tag: Monitoring
 ---
 
 # Internet Speed Test

@@ -1,6 +1,8 @@
 ---
 name: voice-transcribe
-description: Transcribes Telegram voice messages locally with whisper.cpp and returns text for downstream actions.
+title: Voice Transcription
+description: Transcribes Telegram voice messages locally with whisper.cpp.
+tag: Media
 ---
 
 # Voice Transcription

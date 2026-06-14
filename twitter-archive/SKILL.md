@@ -1,6 +1,7 @@
 ---
 name: twitter-archive
-description: Search and query Ben's @palewire Twitter/X archive (tweets, likes, bookmarks, DMs, follower graph) via birdclaw on the NAS.
+description: Searches Ben's @palewire Twitter archive of tweets, likes, and messages.
+tag: Media
 ---
 
 # Twitter Archive

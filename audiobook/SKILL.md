@@ -1,6 +1,7 @@
 ---
 name: audiobook
-description: Convert a long-form article, essay, speech, blog post, PDF, or public document URL into a narrated MP3/M4A audiobook using a pluggable TTS provider (OpenAI / ElevenLabs / Piper / Kokoro). Caches per-chunk audio so repeated runs only re-render changed sections.
+description: Converts a long-form article, PDF, or web page into a narrated audiobook.
+tag: Media
 metadata: {"openclaw": {"emoji": "🎧"}}
 ---
 

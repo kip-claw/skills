@@ -1,6 +1,7 @@
 ---
 name: reading-list
-description: Maintain Ben's reading list Google Sheet. Add books to Finished or Wishlist, update reading status, and query the sheet.
+description: Tracks the books Ben has finished and the ones he wants to read.
+tag: Lists
 metadata: {"openclaw": {"emoji": "📚", "requires": {"bins": ["gog"]}}}
 ---
 

@@ -153,11 +153,13 @@ async function downloadRemoteAudio(input, dir) {
 	return join(dir, downloaded);
 }
 
-async function normalizeAudio(input, output, start) {
+async function normalizeAudio(input, output, start, duration) {
 	await run('ffmpeg', [
 		'-y',
 		'-ss',
 		String(start),
+		'-t',
+		String(duration),
 		'-i',
 		input,
 		'-vn',
@@ -388,7 +390,7 @@ async function main() {
 		const sourceAudio = isRemoteInput(options.input)
 			? await downloadRemoteAudio(options.input, tempDir)
 			: resolve(options.input);
-		await normalizeAudio(sourceAudio, normalizedAudio, options.start);
+		await normalizeAudio(sourceAudio, normalizedAudio, options.start, options.duration);
 		await mkdir(dirname(outputPath), { recursive: true });
 		const render = await renderFrames({
 			audioPath: normalizedAudio,

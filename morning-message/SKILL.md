@@ -1,6 +1,7 @@
 ---
 name: morning-message
-description: Generate Ben's daily good-morning message for the Reuters News Applications Desk Teams channel. Combines location, time, Chartbeat top story, news pegs, schedule, and optional run info.
+description: Writes Ben's daily good-morning message for the Reuters News Applications Desk.
+tag: Work
 metadata:
   openclaw:
     emoji: "🌅"

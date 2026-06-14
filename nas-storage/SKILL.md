@@ -1,6 +1,8 @@
 ---
 name: nas-storage
-description: Manages NAS storage, file transfers, disk usage checks, drive health, and Google Drive sync operations.
+title: NAS Storage
+description: Manages NAS storage, file transfers, disk usage, and drive health.
+tag: Media
 ---
 
 # NAS Storage

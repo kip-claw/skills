@@ -1,6 +1,7 @@
 ---
 name: "reuters-news-bosch"
-description: "Generate sourced Bosch-inspired editorial images from Reuters Chartbeat most-read stories."
+description: Generates Bosch-inspired editorial images from Reuters' most-read stories.
+tag: Work
 ---
 
 # Reuters News Bosch

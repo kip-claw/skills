@@ -1,6 +1,8 @@
 ---
 name: openclaw-upstream-pr
-description: Guide for submitting pull requests to the openclaw/openclaw upstream repository. Use when proposing bug fixes, features, or patches to OpenClaw maintainers.
+title: Openclaw Pull Requests
+description: Guides submitting pull requests to the upstream OpenClaw repository.
+tag: Code
 metadata: {"openclaw": {"emoji": "🦞"}}
 ---
 

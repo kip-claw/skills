@@ -1,6 +1,7 @@
 ---
 name: movie-list
-description: Maintain Ben's movie list Google Sheet. Add movies to Watched or Wishlist, update viewing info, and query the sheet.
+description: Tracks the films Ben has watched and the ones he wants to see.
+tag: Lists
 metadata: {"openclaw": {"emoji": "🎬", "requires": {"bins": ["gog"]}}}
 ---
 

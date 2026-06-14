@@ -1,6 +1,8 @@
 ---
 name: nyc-list
-description: Maintain Ben's NYC list Google Sheet. Add places, update status flags, and query the sheet.
+title: NYC List
+description: Tracks the New York City places Ben has visited.
+tag: Lists
 metadata: {"openclaw": {"emoji": "🗽", "requires": {"bins": ["gog"]}}}
 ---
 

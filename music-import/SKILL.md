@@ -1,6 +1,7 @@
 ---
 name: music-import
-description: Imports new albums into the NAS beets library and guides staging, duplicate checks, cleanup, and Kodi rescan.
+description: Imports new albums into the NAS music library and rescans Kodi.
+tag: Media
 ---
 
 # Music Import

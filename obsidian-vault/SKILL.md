@@ -1,6 +1,7 @@
 ---
 name: obsidian-vault
-description: Works with the Obsidian vault knowledge base to read, create, edit, and search notes.
+description: Reads, writes, edits, and searches notes in Ben's Obsidian vault.
+tag: Work
 ---
 
 # Obsidian Knowledge Base
