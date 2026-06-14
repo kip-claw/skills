@@ -1,0 +1,14 @@
+{
+	"name": "milkdrop-skill",
+	"private": true,
+	"type": "module",
+	"description": "Render MilkDrop/Butterchurn audio visualizations from a local file or remote URL.",
+	"bin": {
+		"milkdrop-render": "src/render-milkdrop.mjs"
+	},
+	"dependencies": {
+		"butterchurn": "^2.6.7",
+		"butterchurn-presets": "^2.4.7",
+		"playwright": "^1.60.0"
+	}
+}

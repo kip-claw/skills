@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate Reuters audiobook files from Chartbeat top stories.
 
-This helper is designed for unattended cron use and always prints a final JSON
-manifest on success:
+This helper is designed for unattended cron use. It writes a durable manifest
+while it runs so partial progress survives agent/tool failures, and it prints a
+compact final JSON manifest on success:
   {"files": [...], "stories": [...]}.
 """
 
@@ -15,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 from urllib import parse, request
@@ -70,10 +72,20 @@ def _slugify(text: str) -> str:
     return slug.strip("-") or "story"
 
 
-def _stage_for_telegram(source: str, rank: int, title: str, run_date: str) -> str:
+def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=str(path.parent), delete=False
+    ) as tmp:
+        json.dump(payload, tmp, ensure_ascii=True, indent=2)
+        tmp.write("\n")
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(path)
+
+
+def _stage_for_telegram(source: str, rank: int, title: str, stage_dir: Path) -> str:
     """Copy a generated audiobook under the workspace so Telegram can attach it."""
     source_path = Path(source)
-    stage_dir = STAGING_ROOT / f"chartbeat-audiobooks-{run_date}"
     stage_dir.mkdir(parents=True, exist_ok=True)
     dest = stage_dir / f"{rank:02d}-{_slugify(title)[:64]}.mp3"
     shutil.copy2(source_path, dest)
@@ -166,10 +178,35 @@ def _run_audiobook(url: str, title: str, env: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def _write_status(path: Path, manifest: dict[str, Any]) -> None:
+    ok_count = len([s for s in manifest["stories"] if not s.get("failed")])
+    failed_count = len([s for s in manifest["stories"] if s.get("failed")])
+    path.write_text(
+        f"# Reuters Chartbeat audiobooks {manifest['run_date']}\n\n"
+        f"Status: {manifest['status']}\n"
+        f"Started: {manifest.get('started_at')}\n"
+        f"Updated: {manifest.get('updated_at', '')}\n"
+        f"Completed: {manifest.get('completed_at', '')}\n"
+        f"Successful files: {ok_count}\n"
+        f"Failed stories: {failed_count}\n"
+        f"Manifest: {manifest['manifest_path']}\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Reuters Chartbeat audiobooks")
     parser.add_argument("--limit", type=int, default=CHARTBEAT_LIMIT_DEFAULT)
     parser.add_argument("--host", default=CHARTBEAT_HOST)
+    parser.add_argument(
+        "--run-date", default=None, help="YYYY-MM-DD date used for staging and manifest paths"
+    )
+    parser.add_argument("--manifest", default=None, help="Path to write JSON manifest")
+    parser.add_argument(
+        "--keep-stage",
+        action="store_true",
+        help="Do not clear today's staging directory before rendering",
+    )
     args = parser.parse_args()
 
     if args.limit < 1:
@@ -200,14 +237,38 @@ def main() -> int:
     stories: list[dict[str, Any]] = []
     files: list[str] = []
     originals: list[str] = []
-    run_date = datetime.now().astimezone().date().isoformat()
+    run_date = args.run_date or datetime.now().astimezone().date().isoformat()
+    stage_dir = STAGING_ROOT / f"chartbeat-audiobooks-{run_date}"
+    manifest_path = Path(args.manifest) if args.manifest else stage_dir / "manifest.json"
+    status_path = stage_dir / "STATUS.md"
 
+    if stage_dir.exists() and not args.keep_stage:
+        shutil.rmtree(stage_dir)
+    stage_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest: dict[str, Any] = {
+        "status": "running",
+        "started_at": datetime.now().astimezone().isoformat(),
+        "run_date": run_date,
+        "files": files,
+        "original_files": originals,
+        "stories": stories,
+        "manifest_path": str(manifest_path),
+        "status_path": str(status_path),
+    }
+    _write_json_atomic(manifest_path, manifest)
+    _write_status(status_path, manifest)
+
+    seen_urls: set[str] = set()
     for idx, page in enumerate(pages, start=1):
         title = page.get("title") or "(no title)"
         readers = int(page.get("stats", {}).get("people", 0) or 0)
         url = _normalize_reuters_url(page.get("path", ""), args.host)
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
 
-        print(f"[{idx}/{len(pages)}] Rendering: {title}")
+        print(f"[{idx}/{len(pages)}] Rendering: {title}", flush=True)
         result = _run_audiobook(url, title, env)
 
         story = {
@@ -225,18 +286,31 @@ def main() -> int:
         if not story["failed"] and story["path"]:
             originals.append(str(story["path"]))
             try:
-                staged_path = _stage_for_telegram(str(story["path"]), idx, title, run_date)
+                staged_path = _stage_for_telegram(str(story["path"]), idx, title, stage_dir)
             except Exception as exc:  # noqa: BLE001
                 story["failed"] = True
                 story["error"] = f"telegram staging failed: {exc}"
-                continue
-            story["original_path"] = story["path"]
-            story["path"] = staged_path
-            files.append(staged_path)
+            else:
+                story["original_path"] = story["path"]
+                story["path"] = staged_path
+                files.append(staged_path)
 
-    manifest = {"files": files, "original_files": originals, "stories": stories}
+        manifest["files"] = files
+        manifest["original_files"] = originals
+        manifest["stories"] = stories
+        manifest["updated_at"] = datetime.now().astimezone().isoformat()
+        _write_json_atomic(manifest_path, manifest)
+        _write_status(status_path, manifest)
+
+    manifest["status"] = "ok" if files else "error"
+    manifest["completed_at"] = datetime.now().astimezone().isoformat()
+    manifest["files"] = files
+    manifest["original_files"] = originals
+    manifest["stories"] = stories
+    _write_json_atomic(manifest_path, manifest)
+    _write_status(status_path, manifest)
     print(json.dumps(manifest, ensure_ascii=True))
-    return 0
+    return 0 if files else 1
 
 
 if __name__ == "__main__":
