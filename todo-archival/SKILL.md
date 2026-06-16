@@ -1,44 +1,39 @@
 ---
-name: todo-archival
+name: "todo-archival"
+description: "Cleans Todo.md by keeping completed items in one Done section until digest sweep."
 title: Todo Cleanup
-description: Moves completed to-do items into an archive buffer for the next digest.
 tag: Work
 ---
 
-# Todo Archival
+# Todo Cleanup
 
-Buffer section: `## Since Last Digest` in `{{HOME}}/obsidian-vault/Todo.md`
-Archive path: `{{HOME}}/obsidian-vault/Archive/Done-Items.md`
 Todo file: `{{HOME}}/obsidian-vault/Todo.md`
+Archive path: `{{HOME}}/obsidian-vault/Archive/Done-Items.md`
 
 ## Purpose
 
-Keep the active `## Work`/`## Teaching`/`## Home`/`## Open Source` lists clean by moving checked items out of the `## Done` section into the `## Since Last Digest` buffer. The buffer is the source of truth for what's shipped between digests; the `news-apps-digest` skill reads from it when drafting and flushes it to the monthly archive when Ben confirms a digest has been sent.
-
-**Important:** This skill no longer archives directly to `Archive/Done-Items.md`. That responsibility moved to `news-apps-digest` so digests and archived items stay in sync.
+Keep `Todo.md` simple. Completed items live in one bottom `## Done` section until Ben confirms a News Apps digest has been sent or explicitly asks to archive/sweep them. The old `## Since Last Digest` buffer is deprecated and should not be recreated.
 
 ## Working rules
 
-- Move checked items from `## Done` into `## Since Last Digest`, preserving order, formatting, and all hashtags
-- Do not touch items already in `## Since Last Digest`
-- Do not write to `Archive/Done-Items.md` (that's `news-apps-digest`'s job after a digest is sent)
-- Update the `modified:` frontmatter timestamp on `Todo.md` when items move
-- Leave the `## Done` header in place (it stays empty between runs and that's fine)
+- Keep one `## Done` section at the bottom of `Todo.md`.
+- Move checked items found in active sections (`## Work`, `## Teaching`, `## Home`, `## Open Source`) into `## Done`, preserving order, formatting, and hashtags.
+- Do not create or use `## Since Last Digest`.
+- Do not write to `Archive/Done-Items.md` during routine cleanup.
+- Update the `modified:` frontmatter timestamp on `Todo.md` when items move or formatting changes.
+- Leave the `## Done` header in place even when empty.
 
 ## Process
 
-1. Read `{{HOME}}/obsidian-vault/Todo.md` completely
-2. Identify checked items (`- [x] ...`) under the `## Done` section
-3. If there are no checked items, exit cleanly — nothing to do
-4. Append those items to the bottom of the `## Since Last Digest` section (above `## Done`)
-5. Remove them from `## Done`
-6. Bump the `modified:` timestamp in the frontmatter
-7. Commit with message: `Move completed items into Since Last Digest buffer`
+1. Read `{{HOME}}/obsidian-vault/Todo.md` completely.
+2. Ensure there is a single `## Done` section at the bottom.
+3. Remove any empty deprecated `## Since Last Digest` section if present.
+4. Identify checked items (`- [x] ...`) under active sections.
+5. Move those checked items into `## Done`.
+6. Clean obvious whitespace issues and bump the `modified:` timestamp.
+7. Validate tags with `kip-todo-lint` or equivalent taxonomy check.
+8. Commit with message: `Clean up todo list`.
 
-## Why this changed
+## Digest closeout
 
-Originally, this skill flushed checked items straight into a monthly section of `Archive/Done-Items.md`. That made "what's been shipped since the last digest" hard to reconstruct — it required diffing the archive across an arbitrary cadence. Now the buffer is explicit, visible in Obsidian, and tied 1:1 to a digest's lifecycle.
-
-## Notes
-
-- If you find yourself wanting to push items into `Archive/Done-Items.md` directly (e.g., Ben requests "archive everything in the buffer"), call `news-apps-digest` with a flush flag — don't bypass it. The digest skill stamps each archived line with a `<!-- digest: YYYY-MM-DD -->` marker so future skills can reconstruct which digest absorbed which item.
+When Ben says a News Apps digest has been sent, use the `news-apps-digest` workflow to sweep `## Done` into `Archive/Done-Items.md` with `<!-- digest: YYYY-MM-DD -->` markers and leave `## Done` empty.

@@ -1,6 +1,6 @@
 ---
-name: obsidian-vault
-description: Reads, writes, edits, and searches notes in Ben's Obsidian vault.
+name: "obsidian-vault"
+description: "Reads, writes, edits, and searches notes in Ben's Obsidian vault."
 tag: Work
 ---
 
@@ -89,7 +89,8 @@ Inside `## Work`, keep:
 
 Global Todo convention:
 - Keep a single `## Done` section at the bottom of `Todo.md` for all completed items across Work, Home, Open Source, and Teaching.
-- Between the active sections and `## Done` there is a `## Since Last Digest` buffer. It holds checked items that have not yet been swept into the monthly archive. The `todo-archival` skill moves items from `## Done` into this buffer; the `news-apps-digest` skill flushes the buffer into `Archive/Done-Items.md` after Ben confirms a digest has been sent. Do not delete or reorder items in `## Since Last Digest` during routine cleanup.
+- Do not use a `## Since Last Digest` section. The old buffer workflow is deprecated.
+- Completed items stay in `## Done` until Ben confirms a News Apps digest has been sent or explicitly asks to archive/sweep them. Then the digest workflow moves them into `Archive/Done-Items.md` with a `<!-- digest: YYYY-MM-DD -->` marker and clears `## Done` fully.
 - Ensure each todo item has a relevant hashtag when possible. Use only canonical tags from `{{HOME}}/.openclaw/workspace/skills/news-apps-digest/taxonomy.yaml` (run the `kip-todo-lint` skill to validate or auto-rename aliases).
 - Remove obvious typos and stray empty lines during routine cleanup.
 
@@ -104,7 +105,7 @@ When Ben says something is done or asks to check it off:
 3. Ensure no blank lines remain after moving items
 4. Do not leave checked items in active sections
 
-Do not move items into `## Since Last Digest` or write to `Archive/Done-Items.md` from this skill. Sweeping `## Done` into the buffer is the `todo-archival` skill's job; flushing the buffer to the monthly archive is `news-apps-digest`'s job.
+Do not write to `Archive/Done-Items.md` from this skill unless Ben explicitly asks to archive/sweep completed items after a digest.
 
 When work is no longer urgent, move it back to `### Medium Priority`.
 
@@ -129,7 +130,7 @@ When work is no longer urgent, move it back to `### Medium Priority`.
 
 ## Periodic review cues
 
-- Daily: Correct typos, clean up misformatted notes, ensure relevant (canonical) hashtags, remove empty lines, and move completed items to the bottom `## Done` section in `Todo.md`. Run `kip-todo-lint` if any new or suspect tags appear.
-- Weekly: Run the `todo-archival` skill to move `## Done` items into `## Since Last Digest`. Do not flush the buffer to `Archive/Done-Items.md` here — that happens automatically when Ben sends a digest via `news-apps-digest`.
+- Daily: Correct typos, clean up misformatted notes, ensure relevant canonical hashtags, remove empty lines, and move completed items to the bottom `## Done` section in `Todo.md`. Run `kip-todo-lint` if any new or suspect tags appear.
+- After Ben says a News Apps digest has been sent, sweep `## Done` into `Archive/Done-Items.md` with that digest date marker, then leave `## Done` empty.
 - Monthly: review `Ideas.md` and category notes in `Documents/`
 - Quarterly: archive stale notes and simplify the vault structure where needed

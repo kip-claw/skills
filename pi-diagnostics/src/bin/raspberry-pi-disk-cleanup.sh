@@ -43,6 +43,21 @@ do_rm "rm -rf {{HOME}}/.cache/node-gyp {{HOME}}/.cache/pip"
 # 4. tombstoned OpenClaw session files
 do_rm "find {{HOME}}/.openclaw/agents/main/sessions -name '*.deleted.*' -delete 2>/dev/null || true"
 
+# 4b. OpenClaw session trajectories older than 30 days
+do_rm "find {{HOME}}/.openclaw/agents/main/sessions -name '*.trajectory.jsonl' -mtime +30 -delete 2>/dev/null || true"
+
+# 4c. codex-home npm download cache (regenerates on demand)
+do_rm "rm -rf {{HOME}}/.openclaw/agents/main/agent/codex-home/home/.npm/_cacache {{HOME}}/.openclaw/agents/main/agent/codex-home/home/.npm/_logs"
+
+# 4d. pnpm: drop packages not referenced by any project, plus stale cache metadata
+do_rm "pnpm store prune 2>/dev/null || true"
+
+# 4e. OpenClaw compile cache (/var/tmp)
+do_rm "sudo -n rm -rf /var/tmp/openclaw-compile-cache/* 2>/dev/null || rm -rf /var/tmp/openclaw-compile-cache/* 2>/dev/null || true"
+
+# 4f. systemd journal — cap retained logs at 50M
+do_rm "sudo -n journalctl --vacuum-size=50M 2>/dev/null || true"
+
 # 5. old VS Code server installs — keep the two most recently used
 if [[ -d {{HOME}}/.vscode-server/cli/servers ]]; then
   mapfile -t old_servers < <(
