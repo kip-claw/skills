@@ -1,6 +1,6 @@
 ---
-name: morning-message
-description: Writes Ben's daily good-morning message for the Reuters News Applications Desk.
+name: "morning-message"
+description: "Writes Ben's daily Reuters News Apps morning message."
 tag: Work
 metadata:
   openclaw:
@@ -44,9 +44,10 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
    forecast"). If none are known, use: `I don't know of any pegs today.`
    Ask Ben if you are unsure.
 
-4. **Schedule** — Lead with the gaggle (daily 11 a.m. meeting). Default is
-   `We gaggle at 11.` Then append any other meetings Ben mentions. If Ben
-   cannot make gaggle, note that instead.
+4. **Schedule** — Lead with the gaggle (daily 2 p.m. Eastern meeting). Default is
+   `We gaggle at 2 p.m. Eastern.` Then append any other meetings Ben mentions.
+   If Ben cannot make gaggle, note that instead. This 2 p.m. default replaced
+   the old 11 a.m. default after Casey Miller moved to Los Angeles.
 
 5. **Run line** (optional) — If Ben ran that morning, add a line describing
    the distance and route. Check the runs log for today's date:
@@ -77,6 +78,9 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 - Emoji go at the start of each line with a space after
 - Keep the tone casual and direct — this is a team chat, not a memo
 - The gaggle emoji is always 🪿 (goose)
+- The default gaggle time is `2 p.m. Eastern`, not 11 a.m.
+- Preserve the format as separate visible lines. In Telegram rich text, insert literal newline characters between every emoji-led item; do not let the message collapse into one paragraph.
+- If using rich HTML for the Chartbeat link, keep each emoji-led item separated by a literal newline, or wrap each item in its own block element such as `<p>...</p>`.
 - Do not add sign-offs or pleasantries beyond the format
 
 ## Examples
@@ -87,7 +91,7 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 ☀️ Good morning from the Thomson Reuters Building at 3 Times Square. It is Wednesday, May 14. The news time is 8:35 a.m.
 📰 The top story on Chartbeat is "Fed signals rate decision is approaching as inflation cools"
 🗓️  Grant has a forecast this morning.
-🪿  We gaggle at 11. I have my regular meeting with Simon at 12.
+🪿  We gaggle at 2 p.m. Eastern. I have my regular meeting with Simon at 12.
 ```
 
 ### Home day with a run
@@ -96,7 +100,7 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 ☀️ Good morning from Studio 4D in moneymaking Manhattan. It is Thursday, May 7. The news time is 9:02 a.m.
 📰 The top story on Chartbeat is "US and Iran explore short-term deal to end fighting"
 🗓️  I don't know of any pegs today.
-🪿  We gaggle at 11. I have a GitHub tech meeting at 1. I'll walk into the office shortly.
+🪿  We gaggle at 2 p.m. Eastern. I have a GitHub tech meeting at 1. I'll walk into the office shortly.
 🏃 I ran 10k over the Queensborough Bridge and back.
 ```
 
@@ -106,7 +110,7 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 ☀️ Good morning from Acela 2910, which left New York Penn Station this morning at 5:27 a.m. It is Tuesday, May 5. The news time is 7:58 a.m.
 📰 The top story on Chartbeat is "Middle East truce in doubt as US and Iran fight for control of Strait of Hormuz"
 🗓️  Grant has some forecasts this morning.
-🪿  I'll be presenting at RESPONSIBLE BUSINESS USA 2026 this morning in Boston, so I can't make gaggle. You should go on without me.
+🪿  I'll be presenting at RESPONSIBLE BUSINESS USA 2026 this morning, so I can't make the 2 p.m. Eastern gaggle. You should go on without me.
 ```
 
 ## Notes
