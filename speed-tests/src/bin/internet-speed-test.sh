@@ -20,10 +20,37 @@ DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
 echo "[$DATE] Running speed test..." >> "$LOG"
 
-RESULT=$(speedtest-cli --json --secure 2>/dev/null)
+OOKLA_BIN="/usr/local/bin/speedtest"
+LEGACY_BIN="/usr/bin/speedtest-cli"
+
+run_speedtest() {
+  # Primary: official Ookla CLI (JSON). Falls back to the legacy speedtest-cli
+  # Python client. The parser handles both JSON schemas.
+  if [ -x "$OOKLA_BIN" ]; then
+    "$OOKLA_BIN" --accept-license --accept-gdpr --format=json 2>>"$LOG"
+  elif [ -x "$LEGACY_BIN" ]; then
+    "$LEGACY_BIN" --json --secure 2>>"$LOG"
+  fi
+}
+
+RESULT=""
+for attempt in 1 2 3; do
+  RESULT=$(run_speedtest)
+  if [ -n "$RESULT" ]; then
+    break
+  fi
+  echo "[$DATE] Speed test attempt $attempt produced no output; retrying..." >> "$LOG"
+  sleep $((attempt * 5))
+done
+
+# Last-resort fallback to the legacy client if Ookla produced nothing.
+if [ -z "$RESULT" ] && [ "$OOKLA_BIN" != "$LEGACY_BIN" ] && [ -x "$LEGACY_BIN" ]; then
+  echo "[$DATE] Ookla CLI returned no output after 3 attempts; trying legacy speedtest-cli" >> "$LOG"
+  RESULT=$("$LEGACY_BIN" --json --secure 2>>"$LOG")
+fi
 
 if [ -z "$RESULT" ]; then
-  echo "[$DATE] Speed test failed — no output" >> "$LOG"
+  echo "[$DATE] Speed test failed — no output after retries" >> "$LOG"
   exit 1
 fi
 
