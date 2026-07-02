@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 from PIL import Image
 
@@ -19,6 +20,50 @@ def read_json(path: Path):
 
 def run(command: list[str], cwd: Path) -> None:
     subprocess.run(command, cwd=cwd, check=True)
+
+
+def assert_publish_preconditions(repo: Path) -> None:
+    """Refuse to publish unless kip-claw is on a clean ``main``.
+
+    Guards unattended auto-publish: if the checkout is on another branch or
+    already has staged changes, abort before mutating anything so a publish
+    commit never sweeps in unrelated work. Raises ``ValueError`` on violation,
+    which the top-level handler turns into a clean non-zero exit.
+    """
+    branch = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if branch != "main":
+        raise ValueError(f"repo is on branch '{branch}', expected 'main'")
+    if subprocess.run(
+        ["git", "diff", "--cached", "--quiet"], cwd=repo, check=False
+    ).returncode:
+        raise ValueError("repo has staged changes; refusing to publish")
+
+
+def push_with_retry(repo: Path, attempts: int = 4) -> None:
+    """Rebase onto origin/main and push, retrying transient failures.
+
+    A concurrent push produces a non-fast-forward; re-pulling with rebase and
+    pushing again resolves it. Network blips are retried with linear backoff.
+    The commit is already made locally, so a failed attempt is safe to retry.
+    """
+    last_error: subprocess.CalledProcessError | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            run(["git", "pull", "--rebase", "--autostash", "origin", "main"], repo)
+            run(["git", "push", "origin", "main"], repo)
+            return
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt < attempts:
+                time.sleep(attempt * 5)
+    assert last_error is not None
+    raise last_error
 
 
 def display_date(value: str) -> str:
@@ -108,6 +153,9 @@ def main() -> int:
         print("Missing required files: " + ", ".join(missing), file=sys.stderr)
         return 1
 
+    if args.publish:
+        assert_publish_preconditions(repo)
+
     source = read_json(run_dir / "chartbeat.json")
     run_date = args.date or source["retrievedAt"][:10]
     date.fromisoformat(run_date)
@@ -164,8 +212,7 @@ def main() -> int:
                 ],
                 repo,
             )
-            run(["git", "pull", "--rebase", "--autostash", "origin", "main"], repo)
-            run(["git", "push", "origin", "main"], repo)
+            push_with_retry(repo)
 
     print(
         json.dumps(
