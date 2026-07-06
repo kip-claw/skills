@@ -3,7 +3,14 @@
 set -euo pipefail
 
 SCRIPT_START=$(date +%s)
-trap 'DURATION=$(( $(date +%s) - SCRIPT_START )); bash {{HOME}}/bin/kip-cron-log.sh "kip-runs" "$?" "$DURATION" "${CRON_NOTES:-}"' EXIT
+
+on_exit() {
+  local rc="$?"
+  local duration=$(( $(date +%s) - SCRIPT_START ))
+  bash {{HOME}}/bin/kip-cron-log.sh "kip-runs" "$rc" "$duration" "${CRON_NOTES:-}" || true
+  exit "$rc"
+}
+trap on_exit EXIT
 
 source {{HOME}}/.openclaw/.env
 if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
@@ -21,6 +28,45 @@ KIP_CLAW_JSON="$KIP_CLAW_REPO/static/data/runs.json"
 PRETTIER="$KIP_CLAW_REPO/node_modules/.bin/prettier"
 LOG="/tmp/kip-runs.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+format_repo_for_push() {
+  local check_out=""
+  local -a bad_files=()
+
+  if check_out=$(cd "$KIP_CLAW_REPO" && "$PRETTIER" --check . 2>&1); then
+    return 0
+  fi
+
+  mapfile -t bad_files < <(printf '%s\n' "$check_out" | sed -n 's/^\[warn\] \(.*\)$/\1/p')
+  if [ ${#bad_files[@]} -eq 0 ]; then
+    echo "[$TIMESTAMP] Failed: prettier --check reported errors but no file list" >> "$LOG"
+    CRON_NOTES="failed: prettier-check"
+    return 1
+  fi
+
+  echo "[$TIMESTAMP] Formatting ${#bad_files[@]} file(s) to satisfy pre-push lint" >> "$LOG"
+  if ! (
+    cd "$KIP_CLAW_REPO"
+    "$PRETTIER" --write "${bad_files[@]}"
+  ) >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: prettier --write on lint-failing files" >> "$LOG"
+    CRON_NOTES="failed: prettier-fix"
+    return 1
+  fi
+
+  git -C "$KIP_CLAW_REPO" add -- "${bad_files[@]}"
+
+  if ! (
+    cd "$KIP_CLAW_REPO"
+    "$PRETTIER" --check .
+  ) >> "$LOG" 2>&1; then
+    echo "[$TIMESTAMP] Failed: prettier --check still failing after auto-format" >> "$LOG"
+    CRON_NOTES="failed: prettier-check"
+    return 1
+  fi
+
+  return 0
+}
 
 echo "[$TIMESTAMP] Exporting runs data..." >> "$LOG"
 
@@ -56,6 +102,10 @@ if ! (
 fi
 
 git -C "$KIP_CLAW_REPO" add static/data/runs.json
+if ! format_repo_for_push; then
+  exit 1
+fi
+
 if git -C "$KIP_CLAW_REPO" diff --cached --quiet; then
   CRON_NOTES="no changes"
   echo "[$TIMESTAMP] No runs changes to commit" >> "$LOG"
