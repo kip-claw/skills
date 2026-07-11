@@ -305,8 +305,13 @@ def call_model(prompt: str, model: str | None, timeout: int) -> dict:
         capture_output=True,
         text=True,
         timeout=timeout,
-        check=True,
+        check=False,
     )
+    if result.returncode:
+        detail = (result.stderr or result.stdout or "(no output)").strip()
+        # Preserve the useful CLI diagnostic without letting an unusually long
+        # provider response overwhelm the cron log.
+        raise RuntimeError(f"model CLI exited {result.returncode}: {detail[-4000:]}")
     return json.loads(result.stdout)
 
 
@@ -504,6 +509,7 @@ def main() -> int:
             used_provider = envelope.get("provider")
         except (
             subprocess.SubprocessError,
+            RuntimeError,
             json.JSONDecodeError,
             ValueError,
             OSError,
