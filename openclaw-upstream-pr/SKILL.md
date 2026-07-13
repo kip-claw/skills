@@ -60,6 +60,27 @@ Key directories in the OpenClaw source:
 
 TypeScript source compiles to `dist/` as bundled JS files (e.g., `dist/server-cron-*.js`).
 
+## Extension / Plugin PRs
+
+Not every PR is a core `src/` fix. Bundled plugins live under `extensions/<name>/` (e.g. `memory-wiki`, `memory-core`, channel plugins). The maintainers' stated default is **"most features should be third-party plugins, not core changes."** A change to a bundled extension is more defensible than a core change, but still expect pushback — if the PR adds a capability, preempt it in the body with a short **"Why in core / why this extension owns it"** paragraph (e.g. it's a thin read-only accessor over data the plugin already derives internally; a third-party plugin couldn't reach it without the `unsafe-local` escape hatch or duplicating logic).
+
+**Plugin manifest contract (bites silently).** Every agent tool a plugin registers via `api.registerTool` **must** also be declared in that plugin's `extensions/<name>/openclaw.plugin.json` under `contracts.tools` (sorted array of tool names). If you add a tool in `index.ts`/`src/tool.ts` but forget the manifest, the plugin registry **rejects the registration at runtime** (`plugin must declare contracts.tools for: <name>`) and the `test:contracts:plugins` lane fails — but `test:extension <name>` does **not** catch it. This is exactly the kind of thing `codex review` flags and the per-extension test misses.
+
+**Validation commands for extension PRs** (run remotely on Crabbox — see git caveat in Step 5):
+
+```bash
+pnpm build
+pnpm tsgo:extensions          # typecheck extension source
+pnpm tsgo:extensions:test     # typecheck extension tests
+pnpm lint:extensions          # oxlint (0 warnings / 0 errors expected)
+oxfmt --check extensions/<name>   # formatter (NOT prettier — repo uses oxfmt)
+pnpm test:extension <name>    # that plugin's vitest suite
+pnpm test:contracts:plugins   # cross-plugin contract lane (enforces the manifest above)
+pnpm format:docs:check        # if the PR touches docs/
+```
+
+Repo tooling is **oxfmt** (`.oxfmtrc.jsonc`) + **oxlint**, **tsgo** for typecheck, **vitest** for tests, `format-docs.mjs` + markdownlint-cli2 for docs. There is **no prettier** — `pnpm exec prettier` will "not found". `oxfmt <file>` auto-fixes; `oxfmt --check` verifies.
+
 ## Workflow
 
 ### 1. Identify the Problem in Production
@@ -160,22 +181,37 @@ This syncs your working tree to a fresh container, runs git init + pnpm install 
 
 #### Iterative development (warm box)
 
-For rapid feedback while developing a fix:
+For rapid feedback while developing a fix. The huge win is **not re-paying `pnpm install` + `pnpm build` (~8 min combined) on every run** — pay it once, then iterate in seconds.
+
+> [!CRITICAL] **Warm boxes have NO `.git` — git-dependent tests fail unless you init it.**
+> Ephemeral `crabbox run` (no `--id`) does `git init/commit` for you. **The warm-box path (`crabbox warmup` + `crabbox run --id`) syncs via rsync and does NOT include `.git`** — the workspace is not a git repo. Many contract tests enumerate files via `git ls-files` (their names read `"lists … from git without walking …"`). With no git they fall back to `fs.readdirSync` and fail en masse with `expected "readdirSync" to not be called at all, but actually been called N times`. In this session **8 of the `test:contracts:plugins` files** failed this way — a pure environment artifact, nothing to do with the code. **Always `git init && git add -A && git commit` in the warm-box workspace before running `test:contracts:plugins` (or any git-listing test).** With git present the suite passed 986/986; without it, 8 spurious failures.
 
 ```bash
-# Lease a persistent container
+# Lease a persistent container — leases in ~1s ("warmup complete total=854ms")
 crabbox warmup --provider cloudflare
-# Returns a slug like "brisk-crab" — reuse it for all subsequent commands
+# Returns an id (cbx_...) + slug (e.g. "brisk-crab"). Reuse the cbx_ id for all runs.
 
-# First run: set up git + deps
-crabbox run --id brisk-crab -- 'git config --global user.email x@x && git config --global user.name x && git init -q && git add -A && git commit -m x -q && corepack enable && pnpm install --frozen-lockfile'
+# --reclaim is REQUIRED if you run from a different cwd than where you warmed up
+# (else: "lease cbx_... is claimed by repo <path>; use --reclaim").
+# First run: set up git (MANDATORY, see callout) + deps
+crabbox run --id cbx_... --reclaim --provider cloudflare -- bash -lc \
+  'git init -q && git config user.email t@t.co && git config user.name t && git add -A && git commit -q -m snapshot && pnpm install --frozen-lockfile'
 
-# Subsequent runs: just build/typecheck (git + deps persist)
-crabbox run --id brisk-crab -- 'git add -A && git commit -m x -q --allow-empty && pnpm build && pnpm tsgo:core && pnpm tsgo:extensions'
+# Subsequent runs: build/test (git + deps persist on the box)
+crabbox run --id cbx_... --reclaim --provider cloudflare -- bash -lc 'pnpm build && pnpm tsgo:extensions'
+crabbox run --id cbx_... --reclaim --provider cloudflare -- bash -lc 'pnpm test:contracts:plugins 2>&1 | tail -40'
 
-# Done — release the container
-crabbox stop brisk-crab
+# Done — release. NOTE: `stop` takes the id POSITIONALLY, provider flag FIRST.
+# `crabbox stop --id <x>` is WRONG (`flag provided but not defined: -id`).
+crabbox stop --provider cloudflare cbx_...
+# If you forget, it auto-releases after the 30m idle timeout — no 24/7 box needed.
 ```
+
+**Sizing / limits (asked-and-answered):** default `-type standard-4`, `-class beast` are already the top tier. The ~15 min cutoff is a **Cloudflare Worker wall-clock/stream limit**, not CPU starvation — a bigger `-type` finishes faster (buying headroom) but does **not** raise the ceiling. `-idle-timeout` (default 30m) governs auto-release; the box is never idle mid-run so that's not what cuts long commands. For cross-session speed without a live box, see `crabbox checkpoint` (snapshot post-install/build) and `crabbox cache warm`.
+
+**`set -e` masks test failures.** In a crabbox script, `set -e` + `pnpm test ...; echo EXIT=$?` aborts the whole script the instant the test returns non-zero — *before* your echo/log-dump runs, so you never see why it failed. Either drop `set -e` around the test, or write output to a file and always `cat`/`tail` it regardless of exit: `pnpm test:contracts:plugins > /tmp/c.log 2>&1; echo "EXIT=$?"; tail -60 /tmp/c.log`.
+
+**Flaky streaming — retry, don't panic.** Transient `cloudflare stream ended before completion` and HTTP2 `PROTOCOL_ERROR` on upload happen; they are not real failures. Retry. To minimize exposure, **split work into short commands** (install / build / each test suite / proof) rather than one long chained run that risks the wall-clock and a mid-stream drop.
 
 #### Troubleshooting
 
@@ -250,6 +286,31 @@ crabbox run --id <slug> -- 'node openclaw.mjs <another-proof-command>'
 crabbox stop <slug>
 ```
 
+#### Proof via a throwaway vitest spec (best for plugin/tool PRs — no build needed)
+
+Importing a tool from `dist/` for proof forces a full `pnpm build` (~slow, and the step most likely to hit the stream limit / a mid-stream drop). Avoid it: **write a throwaway `*.test.ts` that invokes the real tool/function against a seeded fixture and `console.log`s the output, then run it with vitest** — vitest transforms TS on the fly, so no build is required and it runs in seconds on a warm box.
+
+```ts
+// extensions/<name>/src/_proof.test.ts  — TEMP, do NOT commit
+import { it } from "vitest";
+import { createWikiOpenItemsTool } from "./tool.js";
+import { resolveMemoryWikiConfig } from "./config.js";
+// ...seed a temp vault on disk...
+it("PROOF", async () => {
+  const tool = createWikiOpenItemsTool(config);
+  const out = await tool.execute("proof", {});
+  console.log(out.content[0].text);
+  console.log("details =", JSON.stringify(out.details));
+});
+```
+
+```bash
+crabbox run --id cbx_... --reclaim --provider cloudflare -- bash -lc \
+  'pnpm exec vitest run extensions/<name>/src/_proof.test.ts 2>&1 | tail -60'
+```
+
+Create the spec **locally** (so it syncs to the box), capture the printed output for the PR, then delete it before committing (`rm extensions/<name>/src/_proof.test.ts`) — it must not land in the PR. vitest prints `console.log` under a `stdout | …` header.
+
 #### When to use Pi instead of Crabbox
 
 Use local Pi production evidence when the proof requires:
@@ -281,6 +342,16 @@ git push -u origin fix/descriptive-branch-name
 ### 8. Create the Pull Request
 
 The PR body **must** include a **Real behavior proof** section. This is a hard requirement from upstream — unit tests, mocks, CI, lint, and typechecks alone do NOT satisfy it.
+
+> [!WARNING] **The external-PR gate is a LITERAL heading match, not a content check.**
+> The `Real behavior proof` CI job runs `scripts/github/real-behavior-proof-check.mjs` → `real-behavior-proof-policy.mjs`, which requires the body to contain headings matching the **exact** regexes `/^#{2,6}\s+What Problem This Solves\b/im` **and** `/^#{2,6}\s+Evidence\b/im`. A semantically-identical but reworded heading (e.g. `## What problem does this solve?`) **fails the job** even with perfect content. Use the verbatim headings **`## What Problem This Solves`** and **`## Evidence`**. The section must also be non-empty / not a placeholder (`n/a`, `tbd`, `-`, etc. count as missing). Maintainer/collaborator/bot PRs skip this gate; external PRs (like ours) do not.
+
+> [!NOTE] **Editing the PR body/title: use `gh api`, not `gh pr edit`.**
+> `gh pr edit` resolves the author's org membership and fails on this token: `GraphQL: … 'login' field requires … 'read:org' … token has only … [repo, workflow, …]`. Update the body via the REST API instead (no org scope needed):
+> ```bash
+> gh api -X PATCH repos/openclaw/openclaw/pulls/<N> -f body="$(cat body.md)"
+> ```
+> Fetch the current body first (`gh api repos/openclaw/openclaw/pulls/<N> --jq .body`) if you're appending rather than replacing.
 
 ```bash
 # gh is system-authenticated — no env export needed.
@@ -334,7 +405,7 @@ NOT acceptable alone: unit tests, mocks, snapshots, lint, typechecks, CI green.
 
 ## AI Disclosure
 
-- [x] AI-assisted (GitHub Copilot)
+- [x] AI-assisted (Claude Code / Claude Opus 4.8)
 - [x] Human-run real behavior proof from own setup
 - [x] Understand what the code does
 EOF
@@ -374,6 +445,23 @@ gh pr diff --repo openclaw/openclaw <number>          # confirm what reviewers s
 - Resolve or reply to bot review conversations (ClawSweeper, Codex) yourself — do not leave them for maintainers (`gh pr comment` / `gh pr review` for replies)
 - If Codex review doesn't trigger, run `codex review --base origin/main` locally and address findings
 - Monitor for maintainer feedback
+
+#### ClawSweeper — the automated reviewer (take it seriously)
+
+`clawsweeper[bot]` is the primary automated review on every PR. It posts **one durable, marker-backed comment** per PR and **edits that same comment** on each re-review (no duplicate comments). Key behaviors observed:
+
+- **Its findings are high quality.** In this session it correctly caught a runtime-breaking manifest omission (P1) that all local checks missed, then on the next round found 3 more real defects (an opaque-id-instead-of-text bug, an `anyOf`-vs-flat-enum provider-compat issue, and filtered-vs-unfiltered count inconsistency) plus called out that a hand-written "proof" didn't match actual code behavior. **Verify each finding against the code, but assume it's right until proven otherwise** — don't argue, fix.
+- **It gates on real proof.** Status `📣 needs proof` / rating `🦪 silver shellfish` etc.; it explicitly blocks when the posted proof "does not demonstrate the registered tool through OpenClaw." A fabricated/idealized proof block will be caught and called out. Generate proof from an actual invocation (see the vitest-spec technique above).
+- **Re-trigger with `@clawsweeper re-review`** (PR author or write-access can request review-only). Post it as a normal issue comment:
+  ```bash
+  gh api repos/openclaw/openclaw/issues/<N>/comments -f body="@clawsweeper re-review"
+  ```
+  `re-review`/`re-run` do **not** start autofix/automerge — those are maintainer-only (`@clawsweeper autofix|automerge|address review`).
+- **Respond point-by-point in a new comment**, don't silently push. Reference each finding, say what changed, and paste the real proof. It (and maintainers) read that thread.
+
+#### Codex CLI review (pre-flight, before you even push)
+
+Run `codex review --base origin/main` locally to catch what CI's ClawSweeper will catch — cheaper to fix before submitting. Model gotchas on the ChatGPT-account auth: **`gpt-5.5` works**; `gpt-5.3-codex` (not on the account) and `gpt-5.6-terra` (needs a newer CLI) are rejected. Override with `-c model="gpt-5.5"`. If auth expires (`refresh token already used` / `token_expired`), re-login from the Pi terminal. Note this also doubles as an early-warning signal for the terra OAuth expiry the deployment tracks.
 - Be prepared to rebase if `upstream/main` moves ahead. Use `gh repo sync` to update the fork's default branch first, then rebase locally (rebase has no `gh` equivalent):
 
 ```bash
@@ -409,7 +497,16 @@ git push origin fix/branch-name --force-with-lease
 10. **Crabbox handles both build proof AND behavior proof.** The `proof` job builds the binary and runs targeted commands to generate real output. Only fall back to local Pi when proof requires a running gateway, real channels, or active cron state.
 11. **Use `quick-check` over `check`.** Full lint can exceed Cloudflare's ~15 min stream timeout. `quick-check` (build + typecheck) is reliable and catches most issues.
 12. **Base64-encode complex shell scripts in `.crabbox.yaml`.** Crabbox wraps commands in temp script files, breaking embedded quotes. For scripts with loops, conditionals, or single/double quotes, base64-encode the script and decode on the container: `echo <base64> | base64 -d > /tmp/script.sh && chmod +x /tmp/script.sh && /tmp/script.sh`. The `gateway-smoke` job uses this pattern.
-13. **Prefer `gh` over naked `git`/curl.** `gh` is system-authenticated and fork-aware: `gh repo clone` sets `upstream` automatically, `gh repo sync` updates the fork without manual fetch/merge, `gh pr {create,view,checks,diff,comment,status}` cover the PR lifecycle. Only fall back to raw `git` for local-only operations: commit, push, rebase, branch.
+13. **Prefer `gh` over naked `git`/curl.** `gh` is system-authenticated and fork-aware: `gh repo clone` sets `upstream` automatically, `gh repo sync` updates the fork without manual fetch/merge, `gh pr {create,view,checks,diff,comment,status}` cover the PR lifecycle. Only fall back to raw `git` for local-only operations: commit, push, rebase, branch. **Exception:** editing a PR body/title needs `gh api -X PATCH …/pulls/<N> -f body=…` because `gh pr edit` demands a `read:org` scope this token lacks.
+14. **Warm boxes have no `.git`.** The single biggest time-sink this session: `test:contracts:plugins` failed 8 files on a warm box purely because rsync doesn't sync `.git`, so git-listing tests fell back to `readdirSync`. Always `git init && git add -A && git commit` in the warm-box workspace before git-dependent tests. Ephemeral `crabbox run` (no `--id`) doesn't hit this. Don't waste time blaming your diff — check `git rev-parse --is-inside-work-tree` in the box first.
+15. **The external-PR CI gate matches heading text literally.** Body must contain verbatim `## What Problem This Solves` and `## Evidence`. Reworded headings fail even with correct content (`real-behavior-proof-policy.mjs`).
+16. **ClawSweeper is right more than you'd think — fix, don't argue.** It caught a manifest omission and 3 correctness defects local checks missed. Verify against code, then fix. Re-trigger with an `@clawsweeper re-review` issue comment; respond point-by-point in a new comment with real proof.
+17. **Never fabricate proof.** An idealized/hand-written "real behavior proof" that the code can't actually produce will be caught (by ClawSweeper, and it's just wrong). Generate proof from a real invocation — for tools/plugins, a throwaway `*.test.ts` run via `pnpm exec vitest run` (no build needed) is the fast, reliable path.
+18. **Plugin tools must be in `openclaw.plugin.json` `contracts.tools`.** Register a tool in code but omit the manifest → runtime rejection + `test:contracts:plugins` failure, invisible to `test:extension <name>`.
+19. **`set -e` in crabbox scripts hides the failing test log.** It aborts before your echo/`cat` runs. Dump the log unconditionally and inspect it.
+20. **Beware stray NUL bytes turning a file "binary."** A literal `\x00` (e.g. an intended separator that came through as NUL) makes git treat the source as binary — `git diff --numstat` shows `-  -`, `git diff` says "Binary files differ", `file` reports `data`, and the PR diff won't render. Detect with `python3 -c "d=open(p,'rb').read(); print([i for i,b in enumerate(d) if b==0])"`; fix by replacing the byte. Sanity-check `git diff --stat` doesn't show `Bin` for a text file before committing.
+21. **Split crabbox work into short commands.** Install / build / each test suite / proof as separate runs beats one long chain — dodges the ~15 min Worker wall-clock and transient stream drops (`stream ended before completion`, HTTP2 `PROTOCOL_ERROR`), which are just retryable flakes.
+22. **`crabbox stop` syntax:** `crabbox stop --provider cloudflare <cbx_id>` (provider flag first, id positional). `--id` is not a valid `stop` flag. Warm boxes also auto-release after the 30m idle timeout, so 24/7 leasing is never required.
 
 ## Notes
 
