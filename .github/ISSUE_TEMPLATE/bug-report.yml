@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible problem with a published skill.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove tokens, personal data, private URLs, and other sensitive details before submitting.
+  - type: input
+    id: skill
+    attributes:
+      label: Skill name
+      placeholder: e.g. audiobook
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include a redacted error message if helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OpenClaw version, operating system, and any relevant configuration assumptions.

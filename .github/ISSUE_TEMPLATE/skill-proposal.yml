@@ -1,0 +1,40 @@
+name: Skill proposal
+description: Propose a new portable OpenClaw skill or a substantial enhancement.
+title: "skill: "
+labels: ["agent:proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Do not include secrets, private URLs, or personal data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Who needs this and what should it make easier?
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed skill behavior
+      description: Describe inputs, outputs, tools, permissions, and one realistic example.
+    validations:
+      required: true
+  - type: textarea
+    id: portability
+    attributes:
+      label: Portability and safety
+      description: Explain configuration needs, external side effects, and how personal values will be kept out of the public skill.
+    validations:
+      required: true
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Can you contribute a pull request?
+      options:
+        - Yes
+        - No
+        - Maybe, with guidance
+    validations:
+      required: true

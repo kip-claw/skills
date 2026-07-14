@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/kip-claw/skills/security/advisories/new
+    about: Please report vulnerabilities privately rather than opening a public issue.
+  - name: Read the contribution guide
+    url: https://github.com/kip-claw/skills/blob/main/CONTRIBUTING.md
+    about: Review the expectations for issues and pull requests.
