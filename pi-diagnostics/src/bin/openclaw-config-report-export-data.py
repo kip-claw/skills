@@ -19,8 +19,12 @@ def main() -> int:
 
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
-    with open(update_path, "r", encoding="utf-8") as f:
-        upd = json.load(f)
+    # update-check.json was produced by older OpenClaw versions. Its absence
+    # should not prevent a snapshot when the runtime config already records a version.
+    upd = {}
+    if os.path.exists(update_path):
+        with open(update_path, "r", encoding="utf-8") as f:
+            upd = json.load(f)
 
     # Prefer installed/runtime version recorded in config metadata.
     # Fallback to update notifier version for compatibility with older files.
