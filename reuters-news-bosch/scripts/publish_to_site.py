@@ -7,6 +7,7 @@ import argparse
 from datetime import date
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -20,6 +21,12 @@ def read_json(path: Path):
 
 def run(command: list[str], cwd: Path) -> None:
     subprocess.run(command, cwd=cwd, check=True)
+
+
+def update_latest_image(destination: Path, latest_image: Path) -> None:
+    """Refresh the unlinked, stable image alias from a dated edition."""
+    latest_image.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(destination, latest_image)
 
 
 def assert_publish_preconditions(repo: Path) -> None:
@@ -162,12 +169,14 @@ def main() -> int:
     year, month, day = run_date.split("-")
     relative_image = Path("static/images/news-bosch") / year / month / f"{day}.webp"
     destination = repo / relative_image
+    latest_image = repo / "static/images/news-bosch/latest.webp"
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     with Image.open(image_path) as image:
         image = image.convert("RGB")
         image.thumbnail((1800, 1800), Image.Resampling.LANCZOS)
         image.save(destination, "WEBP", quality=88, method=6)
+    update_latest_image(destination, latest_image)
 
     manifest = read_json(run_dir / "manifest.json")
     image_model = (
@@ -197,6 +206,7 @@ def main() -> int:
 
     if args.publish:
         run(["git", "add", "-f", str(relative_image)], repo)
+        run(["git", "add", "-f", str(latest_image.relative_to(repo))], repo)
         run(["git", "add", "src/lib/newsBosch.json"], repo)
         staged = subprocess.run(
             ["git", "diff", "--cached", "--quiet"], cwd=repo, check=False
@@ -219,6 +229,7 @@ def main() -> int:
             {
                 "date": run_date,
                 "image": str(destination),
+                "latestImage": str(latest_image),
                 "index": str(index_path),
                 "published": args.publish,
             }

@@ -56,6 +56,22 @@ class PushWithRetryTests(unittest.TestCase):
             publish_to_site.time.sleep = original_sleep
 
 
+class LatestImageTests(unittest.TestCase):
+    def test_copies_dated_image_to_stable_alias(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dated = root / "2026/07/17.webp"
+            latest = root / "latest.webp"
+            dated.parent.mkdir(parents=True)
+            dated.write_bytes(b"daily-bosch")
+
+            publish_to_site.update_latest_image(dated, latest)
+
+            self.assertEqual(latest.read_bytes(), b"daily-bosch")
+
+
 class PublishPreconditionTests(unittest.TestCase):
     @staticmethod
     def _init_repo(path: Path) -> None:
