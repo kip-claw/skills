@@ -12,7 +12,10 @@ import subprocess
 import sys
 import time
 
-from PIL import Image
+from PIL import Image, ImageOps
+
+
+EINK_SIZE = (800, 480)
 
 
 def read_json(path: Path):
@@ -27,6 +30,28 @@ def update_latest_image(destination: Path, latest_image: Path) -> None:
     """Refresh the unlinked, stable image alias from a dated edition."""
     latest_image.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(destination, latest_image)
+
+
+def render_eink_image(source: Path, destination: Path) -> None:
+    """Create a high-contrast, dithered 800×480 image for an e-ink display.
+
+    This is a derivative of the completed Daily Bosch artwork, not a second
+    image-model generation. ``ImageOps.fit`` produces the landscape TRMNL
+    frame exactly; Floyd-Steinberg dithering keeps fine details readable on a
+    monochrome e-ink panel.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(source) as image:
+        grayscale = image.convert("L")
+        fitted = ImageOps.fit(
+            grayscale,
+            EINK_SIZE,
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+        contrasted = ImageOps.autocontrast(fitted, cutoff=1)
+        dithered = contrasted.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
+        dithered.save(destination, "PNG", optimize=True)
 
 
 def assert_publish_preconditions(repo: Path) -> None:
@@ -170,6 +195,11 @@ def main() -> int:
     relative_image = Path("static/images/news-bosch") / year / month / f"{day}.webp"
     destination = repo / relative_image
     latest_image = repo / "static/images/news-bosch/latest.webp"
+    relative_eink_image = (
+        Path("static/images/news-bosch/eink") / year / month / f"{day}.png"
+    )
+    eink_destination = repo / relative_eink_image
+    latest_eink_image = repo / "static/images/news-bosch/eink/latest.png"
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     with Image.open(image_path) as image:
@@ -177,6 +207,8 @@ def main() -> int:
         image.thumbnail((1800, 1800), Image.Resampling.LANCZOS)
         image.save(destination, "WEBP", quality=88, method=6)
     update_latest_image(destination, latest_image)
+    render_eink_image(image_path, eink_destination)
+    update_latest_image(eink_destination, latest_eink_image)
 
     manifest = read_json(run_dir / "manifest.json")
     image_model = (
@@ -207,6 +239,8 @@ def main() -> int:
     if args.publish:
         run(["git", "add", "-f", str(relative_image)], repo)
         run(["git", "add", "-f", str(latest_image.relative_to(repo))], repo)
+        run(["git", "add", "-f", str(relative_eink_image)], repo)
+        run(["git", "add", "-f", str(latest_eink_image.relative_to(repo))], repo)
         run(["git", "add", "src/lib/newsBosch.json"], repo)
         staged = subprocess.run(
             ["git", "diff", "--cached", "--quiet"], cwd=repo, check=False
@@ -230,6 +264,8 @@ def main() -> int:
                 "date": run_date,
                 "image": str(destination),
                 "latestImage": str(latest_image),
+                "einkImage": str(eink_destination),
+                "latestEinkImage": str(latest_eink_image),
                 "index": str(index_path),
                 "published": args.publish,
             }

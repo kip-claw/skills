@@ -72,6 +72,26 @@ class LatestImageTests(unittest.TestCase):
             self.assertEqual(latest.read_bytes(), b"daily-bosch")
 
 
+class EinkImageTests(unittest.TestCase):
+    def test_creates_a_dithered_trmnl_sized_png(self) -> None:
+        import tempfile
+
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.png"
+            output = root / "eink.png"
+            Image.linear_gradient("L").resize((1536, 1024)).save(source)
+
+            publish_to_site.render_eink_image(source, output)
+
+            with Image.open(output) as image:
+                self.assertEqual(image.size, (800, 480))
+                self.assertEqual(image.mode, "1")
+                self.assertEqual(set(image.getdata()), {0, 255})
+
+
 class PublishPreconditionTests(unittest.TestCase):
     @staticmethod
     def _init_repo(path: Path) -> None:
