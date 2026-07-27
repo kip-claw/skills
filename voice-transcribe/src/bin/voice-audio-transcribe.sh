@@ -18,7 +18,10 @@ AUDIO_SECONDS=0
 PROCESSING_MS=0
 OUTCOME=error
 STATUS=unknown
-trap 'rc=$?; end_ms=$(date +%s%3N); total_ms=$((end_ms - START_MS)); rtf=$(awk -v p="$PROCESSING_MS" -v a="$AUDIO_SECONDS" "BEGIN { if (a > 0) printf \"%.4f\", p / (a * 1000); else print 0 }"); "$LOG_SCRIPT" "$OUTCOME" "$AUDIO_SECONDS" "$total_ms" "$PROCESSING_MS" "$rtf" "$MODEL" "$STATUS" >/dev/null 2>&1 & rm -rf "$TMPDIR"; exit "$rc"' EXIT
+# Logging is deliberately synchronous. The caller is a short-lived execution
+# process, so a background logger can be terminated when transcription returns
+# before it reaches Google Sheets.
+trap 'rc=$?; end_ms=$(date +%s%3N); total_ms=$((end_ms - START_MS)); rtf=$(awk -v p="$PROCESSING_MS" -v a="$AUDIO_SECONDS" "BEGIN { if (a > 0) printf \"%.4f\", p / (a * 1000); else print 0 }"); "$LOG_SCRIPT" "$OUTCOME" "$AUDIO_SECONDS" "$total_ms" "$PROCESSING_MS" "$rtf" "$MODEL" "$STATUS" >/dev/null 2>&1; rm -rf "$TMPDIR"; exit "$rc"' EXIT
 
 INPUT="$1"
 WAV="$TMPDIR/audio.wav"
