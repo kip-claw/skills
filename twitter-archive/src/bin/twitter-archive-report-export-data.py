@@ -48,7 +48,12 @@ def main() -> int:
 
     year_files = sorted(f.strip() for f in list_result.stdout.splitlines() if f.strip().endswith(".jsonl"))
 
-    # 3. Read tweets, filter to authored
+    # 3. Read tweets, filter to authored.
+    #
+    # Older JSONL backups identify authored tweets only through the authored
+    # timeline edge.  Live-sync records are written with the stable local
+    # ``profile_me`` author id, but the edge export can lag behind them.  Use
+    # both signals so a stale edge file cannot make the public report stale.
     tweets = []
     for fname in year_files:
         lines = ssh_read_lines(ssh_opts, f"{base}/tweets/{fname}")
@@ -56,7 +61,7 @@ def main() -> int:
             if not line.strip():
                 continue
             t = json.loads(line)
-            if t["id"] in authored_ids:
+            if t["id"] in authored_ids or t.get("author_profile_id") == "profile_me":
                 tweets.append(t)
 
     # 4. Build monthly counts
