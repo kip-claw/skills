@@ -38,21 +38,21 @@ if ! timeout 120s openclaw memory status --deep --json > "$STATUS_JSON"; then
   exit 1
 fi
 
-if ! timeout 120s python3 {{HOME}}/bin/openclaw-memory-export-core.py \
-  "$KIP_CLAW_JSON" \
-  "$TIMESTAMP" \
-  "$STATUS_JSON" </dev/null >> "$LOG" 2>&1; then
-  echo "[$TIMESTAMP] Failed to export OpenClaw memory snapshot" >> "$LOG"
-  CRON_NOTES="failed: export"
-  exit 1
-fi
-
 if ! timeout 180s python3 {{HOME}}/bin/openclaw-memory-map-export-core.py \
   "$KIP_CLAW_MAP_JSON" \
   "$TIMESTAMP" \
   "$MEMORY_DB" </dev/null >> "$LOG" 2>&1; then
   echo "[$TIMESTAMP] Failed to export OpenClaw memory semantic map" >> "$LOG"
   CRON_NOTES="failed: map export"
+  exit 1
+fi
+
+if ! timeout 120s python3 {{HOME}}/bin/openclaw-memory-export-core.py \
+  "$KIP_CLAW_JSON" \
+  "$TIMESTAMP" \
+  "$STATUS_JSON" </dev/null >> "$LOG" 2>&1; then
+  echo "[$TIMESTAMP] Failed to export OpenClaw memory snapshot" >> "$LOG"
+  CRON_NOTES="failed: export"
   exit 1
 fi
 
