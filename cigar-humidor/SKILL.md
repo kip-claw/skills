@@ -1,6 +1,6 @@
 ---
-name: cigar-humidor
-description: Logs humidity readings, Boveda pack changes, and new cigars to Ben's humidor spreadsheet.
+name: "cigar-humidor"
+description: "Add a current-aging summary workflow for every logged cigar."
 tag: Lists
 metadata: {"openclaw": {"emoji": "🫘", "requires": {"bins": ["gog"]}}}
 ---
@@ -15,140 +15,51 @@ Manages Ben's cigar humidor tracking in a single Google Sheet with four tabs:
 ### Tab 1: Cigars
 Columns: `Date Added`, `Maker`, `Model`, `Wrapper`, `Origin`, `Size`, `Gauge`, `Notes`
 
-- **Date Added**: Current date (YYYY-MM-DD)
-- **Maker**: Cigar brand/maker (e.g., Martinez, Arturo Fuente, H. Upmann)
-- **Model**: Specific cigar model/name (e.g., 654, Magnum Grand Reserva, The Banker)
-- **Wrapper**: Wrapper leaf type (e.g., Maduro, Connecticut)
-- **Origin**: Country of origin
-- **Size**: Vitola/size (e.g., Robusto, Toro)
-- **Gauge**: Ring gauge (e.g., 50, 52)
-- **Notes**: Relevant notes about the cigar
-
 ### Tab 2: Humidity Readings
 Columns: `Date`, `Time`, `RH%`, `Temperature (°F)`, `Notes`
-
-- **Date**: Reading date (YYYY-MM-DD)
-- **Time**: Optional time (HH:MM)
-- **RH%**: Relative humidity percentage
-- **Temperature (°F)**: Optional temperature
-- **Notes**: Observations
 
 ### Tab 3: Boveda Changes
 Columns: `Date Changed`, `Pack Type`, `RH%`, `Pack Count`, `Notes`
 
-- **Date Changed**: Change date (YYYY-MM-DD)
-- **Pack Type**: e.g., 65°, 69°, 72°
-- **RH%**: Pack RH rating
-- **Pack Count**: Number of packs
-- **Notes**: Reason for change or observations
-
 ### Tab 4: Smoked Cigars
 Columns: `Make`, `Model`, `Date`, `Notes`
 
-- **Make**: Cigar brand/maker
-- **Model**: Specific cigar model/name
-- **Date**: Smoked date (YYYY-MM-DD)
-- **Notes**: Smoking notes, impressions, or context
-
 ## Commands
 
-### Log a Humidity Reading
+### Query cigars
 
 ```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Humidity Readings!A:E" \
-  --values-json '[["2026-04-15","21:01","65","","Fresh reading"]]' \
-  --insert INSERT_ROWS
+gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A1:H1000" --json
 ```
 
-### Log a Boveda Pack Change
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Boveda Changes!A:E" \
-  --values-json '[["2026-04-15","65°","1","","Monthly rotation"]]' \
-  --insert INSERT_ROWS
-```
-
-### Add a Cigar
+### Add a cigar
 
 ```bash
 gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A:H" \
-  --values-json '[["2026-04-15","Montecristo","No. 2","Maduro","Cuba","Torpedo","52","Classic Cuban"]]'\
+  --values-json '[["2026-04-15","Montecristo","No. 2","Maduro","Cuba","Torpedo","52","Classic Cuban"]]' \
   --insert INSERT_ROWS
 ```
 
-### Log a Smoked Cigar
+## Aging Summary
 
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A:D" \
-  --values-json '[["Martinez","Flatiron","2026-05-22","Nice draw and solid flavor throughout."]]' \
-  --insert INSERT_ROWS
-```
+When Ben asks how long cigars have been aging:
 
-### Query Cigars
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A1:H20" --json
-```
-
-### Query Humidity Readings
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Humidity Readings!A1:E10" --json
-```
-
-### Query Boveda Changes
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Boveda Changes!A1:E10" --json
-```
-
-### Query Smoked Cigars
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A1:D10" --json
-```
+1. Query `Cigars!A1:H1000`.
+2. Treat each `Date Added` as the aging start date; use the current date in America/New_York as the end date.
+3. Calculate elapsed full calendar days for every logged cigar.
+4. Return every cigar, oldest first, as concise Telegram-friendly bullets: `Maker Model — N days`.
+5. State that the calculation is based on the recorded date added. Do not modify the sheet.
 
 ## Workflow Rules
 
-- **Always confirm** before adding entries
-- **Prompt for missing fields**: If Ben doesn't provide RH%, ask for it before adding humidity readings
-- **Prompt for missing fields**: If Ben doesn't provide all cigar details, ask before adding
-- **Prompt for missing fields**: If Ben doesn't provide make/model/date when logging a smoked cigar, ask before adding
-- **New entries go at the TOP** of each tab (row 2, right after the header)
-- **Date format**: YYYY-MM-DD for all date fields
-- **Time format**: HH:MM (optional)
-- **Pack Type**: Use standard Boveda ratings (65°, 69°, 72°)
-
-## Examples
-
-### Log humidity reading (65% RH)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Humidity Readings!A:E" \
-  --values-json '[["2026-04-15","21:01","65","","Fresh reading"]]' \
-  --insert INSERT_ROWS
-```
-
-### Add cigar to log
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A:H" \
-  --values-json '[["2026-04-15","Montecristo","No. 2","Maduro","Cuba","Torpedo","52","Classic Cuban"]]'\
-  --insert INSERT_ROWS
-```
-
-### Log smoked cigar
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Smoked Cigars!A:D" \
-  --values-json '[["Arturo Fuente","Hemingway Short Story","2026-05-22","Burned well and tasted great with coffee."]]' \
-  --insert INSERT_ROWS
-```
+- Always confirm before adding or changing entries.
+- Prompt for missing details before adding a cigar.
+- New entries go at the top of each tab, in row 2 after the header.
+- Use `YYYY-MM-DD` for all dates.
+- Keep Telegram replies concise; do not use tables.
 
 ## Notes
 
 - Sheet ID: `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`
 - Tabs: `Cigars`, `Humidity Readings`, `Boveda Changes`, `Smoked Cigars`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
-- Old Obsidian files archived: `{{HOME}}/obsidian-vault/Projects/Cigar Humidor Humidity Log.md` and `{{HOME}}/obsidian-vault/Projects/Cigar Log.md`
-- Separate Humidity Log sheet (`1Wf5klf_gH85ciBEQVtAvIbtVqNEzFY6Rl8G_RwfjStg`) can be deleted or archived
+- Requires `gog` with Sheets API access.
