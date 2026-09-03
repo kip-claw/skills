@@ -37,17 +37,17 @@ def _run(image_path: Path) -> int:
 
 
 class ValidateImageTests(unittest.TestCase):
-    def test_valid_landscape_image_passes(self) -> None:
+    def test_native_4k_image_passes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "image.png"
-            _noise_image(path, 1536, 1024)
+            _noise_image(path, 3840, 2160)
             self.assertEqual(_run(path), 0)
             self.assertEqual(validate_image.validate(path), [])
 
     def test_square_image_fails_aspect(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "image.png"
-            _noise_image(path, 1536, 1536)
+            _noise_image(path, 2160, 2160)
             self.assertEqual(_run(path), 1)
             self.assertTrue(
                 any("aspect ratio" in p for p in validate_image.validate(path))
@@ -56,16 +56,16 @@ class ValidateImageTests(unittest.TestCase):
     def test_small_image_fails_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "image.png"
-            _noise_image(path, 800, 600)
+            _noise_image(path, 1536, 1024)
             self.assertEqual(_run(path), 1)
             self.assertTrue(
-                any("dimensions too small" in p for p in validate_image.validate(path))
+                any("dimensions must be native 4K" in p for p in validate_image.validate(path))
             )
 
     def test_blank_image_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "image.png"
-            _solid_image(path, 1536, 1024)
+            _solid_image(path, 3840, 2160)
             self.assertEqual(_run(path), 1)
             self.assertTrue(
                 any("near-blank" in p for p in validate_image.validate(path))

@@ -17,14 +17,11 @@ import sys
 
 from PIL import Image, ImageStat
 
-# Both valid generation lanes are landscape triptychs: gpt-image-2 OAuth at
-# 1536x1024 (aspect 1.50) and the direct API at 1792x1024 (aspect 1.75). The
-# rejected square lane was 1024x1024 (aspect 1.0), so a lower bound of 1.4 keeps
-# valid output while catching squares and portrait frames.
-MIN_WIDTH = 1400
-MIN_HEIGHT = 900
-MIN_ASPECT = 1.4
-MAX_ASPECT = 2.2
+# Both generation lanes must now return the Frame-ready native 4K canvas.
+# Reject every other size rather than silently publishing an image that would
+# require upscaling for the television.
+EXPECTED_WIDTH = 3840
+EXPECTED_HEIGHT = 2160
 MIN_BYTES = 50_000
 MIN_STDDEV = 8.0
 
@@ -44,16 +41,17 @@ def validate(image_path: Path) -> list[str]:
     except Exception as exc:  # noqa: BLE001 - any decode failure is a hard fail
         return [f"could not open image: {exc}"]
 
-    if width < MIN_WIDTH or height < MIN_HEIGHT:
+    if (width, height) != (EXPECTED_WIDTH, EXPECTED_HEIGHT):
         problems.append(
-            f"dimensions too small: {width}x{height} < {MIN_WIDTH}x{MIN_HEIGHT}"
+            "dimensions must be native 4K: "
+            f"{width}x{height} != {EXPECTED_WIDTH}x{EXPECTED_HEIGHT}"
         )
 
     aspect = width / height if height else 0.0
-    if not (MIN_ASPECT <= aspect <= MAX_ASPECT):
+    expected_aspect = EXPECTED_WIDTH / EXPECTED_HEIGHT
+    if abs(aspect - expected_aspect) > 1e-9:
         problems.append(
-            f"aspect ratio {aspect:.3f} outside [{MIN_ASPECT}, {MAX_ASPECT}] "
-            f"({width}x{height})"
+            f"aspect ratio {aspect:.3f} is not 16:9 ({width}x{height})"
         )
 
     stddev = ImageStat.Stat(grayscale).stddev[0]

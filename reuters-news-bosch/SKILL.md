@@ -1,145 +1,57 @@
 ---
 name: "reuters-news-bosch"
-description: Generates Bosch-inspired editorial images from Reuters' most-read stories.
+description: "Add a post-publish, image-to-image vellum Frame stage using Samsung's flexible antique matte."
 tag: Work
 ---
 
 # Reuters News Bosch
 
-Generate a daily news allegory from Reuters Chartbeat's most-read stories,
-publish it to the public site, and deliver the live link to Telegram. The
-entire pipeline is deterministic and runs unattended from a single orchestrator
-script. Generation, publishing, and delivery are fully automated end to end;
-no step requires human review or model calls beyond theme derivation.
+Generate a daily news allegory from Reuters Chartbeat's most-read stories, publish the full-color edition to kip.computer, and then automatically create and display a monochrome vellum interpretation on Ben's Samsung Frame. The public color edition and the private Frame edition are separate artifacts. The entire pipeline is deterministic apart from the two explicitly recorded image-generation calls.
 
 ## Generate
 
-The whole generation pipeline runs from one allowlisted orchestrator:
+Run the allowlisted orchestrator:
 
 ```bash
 {{HOME}}/bin/reuters-news-bosch-cron.sh
 ```
 
-It performs these discrete, individually testable steps and writes everything
-into a dated run directory under
-`${HOME}/.openclaw/workspace/tmp/reuters-news-bosch/`:
+It writes each run to `{{HOME}}/.openclaw/workspace/tmp/reuters-news-bosch/<timestamp>/`:
 
-1. `scripts/chartbeat_snapshot.py --limit 10` — immutable ranked source
-   snapshot (`chartbeat.json`). Stops if fewer than five suitable stories.
-2. `scripts/direction_card.py --date <today> --runs-root <root>` — deterministic,
-   date-seeded creative direction (`direction.json`), including
-   `avoidRecentMotifs` derived from recent manifests.
-3. `scripts/derive_themes.py` — derives 3-6 themes (`themes.json`) plus a
-   `themes-meta.json` sidecar. Themes come from the **configured default model**
-   via `openclaw infer model run --json` (no `--model`, so it follows config).
-   The response is strictly validated: every theme must cite at least one real
-   story rank. If the model is throttled, unavailable, or returns invalid output,
-   it falls back to a **deterministic, content-aware rule-based deriver** so the
-   edition always ships. `themeSource` records `model` or `fallback`.
-4. `scripts/compose_edition.py` — deterministic assembly of `prompt.txt`,
-   `alt.txt`, and `caption.md` from the snapshot, direction card, and themes.
-   The prompt builds a panoramic three-part allegory (left: origins/causes;
-   center: the central conflict; right: aftermath/risks), honors the direction
-   card, avoids `avoidRecentMotifs`, and instructs the model to invent a fresh
-   symbolic vocabulary.
-5. Image generation — `openclaw infer image generate --model openai/gpt-image-2`
-   (OpenAI only, `--size 1536x1024`, `--timeout-ms 900000`) with up to three
-   retries. `scripts/select_image.py` normalizes the output to `image.png` and
-   fails hard on an empty or missing image.
-5c. `scripts/validate_image.py` — deterministic image sanity gate that replaces
-   the old human review for mechanical failures. Rejects an unreadable,
-   wrongly-shaped (non-landscape, e.g. a 1:1 fallback), truncated, or near-blank
-   frame before any manifest build or publish. No model calls.
-6. `scripts/build_manifest.py --meta-file themes-meta.json` — writes
-   `manifest.json` (provenance, `themeSource`, `motifsUsed`) and `preview.md`.
-   Recording `motifsUsed` re-enables motif repetition control for future runs.
-7. `scripts/publish_to_site.py --publish` — deterministic, unattended publish
-   of the edition to the public site (see **Publish** below). No model calls.
-8. Telegram delivery — sends the live page link and the image once publishing
-   has fully finished. On any failure the orchestrator sends a concise Telegram
-   failure notice and logs to
-   `${HOME}/.openclaw/logs/kip-reuters-news-bosch.log`.
-9. Housekeeping — best-effort pruning of run directories (keeps the most recent
-   30) and rotation of the log once it exceeds 5 MB. Never fails a successful
-   run.
+1. Create an immutable Chartbeat snapshot, date-seeded direction card, sourced themes, and the color-edition prompt/alt/caption.
+2. Generate the public color artwork with `gpt-image-2` at exactly 3840×2160 PNG through the primary OpenClaw route, retaining the existing direct OpenAI API fallback, retries, provenance, and 4K validator.
+3. Build the manifest and publish the color edition to `https://kip.computer/apps/news-bosch/YYYY/MM/DD`. This remains a hard requirement: if it fails, do not attempt the Frame stage.
+4. After a successful public publish, create a private Frame rendition from the validated `image.png` using the OpenAI Images **edits** endpoint and the same `gpt-image-2` model. Submit the color image as the edit input; do not recreate the scene from text alone. Request a 3840×2160 PNG with this purpose-built transformation prompt:
 
-Before any generation, an **idempotency guard** checks the published index: if
-today's date is already live, the run is skipped so a cron retry cannot
-regenerate and replace an existing edition. Set `BOSCH_FORCE_REPUBLISH=1` to
-intentionally rebuild a day.
+   ```
+   Transform this exact Daily Bosch artwork into a restrained monochrome vellum illustration for a Samsung Frame display. Preserve the complete composition, all meaningful figures, objects, and spatial relationships from the supplied image. Render it in warm parchment, sepia, charcoal, and muted ivory tones: antique paper texture, fine engraved or ink-wash linework, subtle hand-tinted shading, no vivid color, no caption, no signature, no new border, and no simulated physical frame. Keep an exact 16:9 landscape composition at 3840×2160.
+   ```
 
-The published edition goes live at
-`https://kip.computer/apps/news-bosch/YYYY/MM/DD`.
+   Save the result as `frame-vellum.png`; write the edit response to `frame-vellum-result.json`; add the prompt, model, requested size, source SHA-256, output SHA-256, output dimensions, and status to `frame-vellum.json` and the main manifest.
+5. Validate `frame-vellum.png` with the existing image validator, requiring a readable, nonblank, exact native 3840×2160 16:9 PNG. Never crop, center-crop, pad, resize, or bake a matte into either artifact.
+6. Use the locally installed Frame client directly from its source environment, with the already paired TV and token:
+   ```bash
+   {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art upload <frame-vellum.png> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --matte flexible_antique --confirm-upload
+   {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art display <returned-content-id> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --confirm-display
+   ```
+   If the `frame-art` console script is unavailable, invoke the same installed project with its documented Python module and explicit `PYTHONPATH={{HOME}}/Code/art.kip.computer/src`; do not rely on a workspace-relative command. Record the content ID, matte (`flexible_antique`), host, and display result in `frame-art.json` and the manifest.
+7. Send the usual Telegram notification after the publish and Frame attempt. Include the public URL and one concise Frame status: displayed (with content ID), or published but Frame skipped/failed. Retain the color image as the Telegram media.
 
+## Implementation requirements
 
-## Publish
+Update `{{HOME}}/bin/reuters-news-bosch-cron.sh` and add small testable helpers under `skills/reuters-news-bosch/scripts/` as needed.
 
-Publishing is automatic: the orchestrator runs `scripts/publish_to_site.py`
-with `--publish` as a deterministic, token-free subprocess after the manifest
-is built. It passes the exact date and the image model used, so no LLM
-reasoning is involved in publishing. To run it manually (e.g. to re-publish a
-previous run) invoke:
-
-```bash
-python scripts/publish_to_site.py \
-  --run-dir "$RUN_DIR" \
-  --repo "${HOME}/Code/kip-claw" \
-  --date "<YYYY-MM-DD>" \
-  --model "<provider/model from the image generation result>" \
-  --publish
-```
-
-The command:
-
-1. Converts the approved image to a web-optimized WebP.
-2. Copies it to `static/images/news-bosch/YYYY/MM/DD.webp`.
-3. Inserts or replaces that date in `src/lib/newsBosch.json`.
-4. Records the exact image model and the `reuters-news-bosch` skill for the
-   public AI disclosure.
-5. Runs repo-local Prettier, `npm run lint`, `npm run check`, and
-   `npm run build`.
-6. With `--publish`, first asserts kip-claw is on a clean `main` (no other
-   branch, no pre-existing staged changes) and aborts otherwise, then commits
-   only the generated image and archive index, and pushes `main` with
-   rebase-and-retry (`push_with_retry`) so a transient network error or a
-   concurrent non-fast-forward push is retried with backoff.
-
-Omit `--publish` to stage and validate a local preview without committing or
-pushing.
-
-## Files
-
-Each run directory contains:
-
-- `chartbeat.json`: immutable ranked source snapshot.
-- `direction.json`: deterministic daily creative direction and recent motifs
-  to avoid.
-- `themes.json`: theme names, interpretations, and supporting story ranks.
-- `themes-meta.json`: theme provenance (`themeSource`, model, motifs).
-- `prompt.txt`: exact image prompt.
-- `image-result.json`: raw image generation result envelope.
-- `image.png`: generated artwork.
-- `alt.txt`: visible composition description.
-- `caption.md`: short disclosure and source-oriented caption.
-- `manifest.json`: provenance and artifact metadata.
-- `preview.md`: human-readable review sheet.
+- Preserve `IMAGE_PRIMARY_SIZE=3840x2160`, `IMAGE_DIRECT_SIZE=3840x2160`, current primary/fallback behavior, idempotency guard, publishing flow, and color provenance.
+- Implement the image-to-image vellum operation with the OpenAI Images edits API and multipart upload; do not use a text-only generation call, and do not place API keys in run artifacts, logs, command arguments, manifests, or Telegram.
+- The Frame stage starts only after site publication succeeds. Its failure is non-fatal to the already-live public edition: log and notify the failure, preserve all artifacts, and exit successfully with a clear `published; frame ... failed` status. A color-generation or public-publish failure remains fatal as today.
+- Add bounded retries for the vellum edit and the Frame upload/display. Do not retry a completed site publish. On retry, use the same `frame-vellum.png` if generation already validated; do not create an untracked alternate.
+- Add tests using mocked HTTP and Frame client calls that verify: edit request includes the color source image and 3840×2160 request; vellum prompt is captured; non-4K vellum output is rejected; upload uses `flexible_antique`; display follows a successful upload; Frame failure does not change a successful publication outcome; no TV action happens when public publication fails.
+- Keep the daily run idempotent. A normal rerun after a fully published day skips as before; `BOSCH_FORCE_REPUBLISH=1` is the only permitted way to deliberately replace the date.
 
 ## Rules
 
-- Every theme must cite at least one story rank from `chartbeat.json`.
-- Use the date-seeded direction card so rerunning a date produces the same
-  creative constraints.
-- Record concrete motifs used in `manifest.json` after review. Future runs use
-  recent manifests to discourage repetition.
-- Keep factual story data separate from creative interpretation.
-- Label the work as AI-generated editorial artwork based on a point-in-time
-  Reuters Chartbeat ranking.
-- Represent public figures symbolically unless identity is essential and
-  supported by the reporting.
-- Do not imply unsupported wrongdoing or private conduct.
-- Do not substitute a homepage scrape if Chartbeat fails.
-- Publishing is automatic and deterministic; it runs unattended with no model
-  calls. If a run must be withheld, stop the orchestrator before the publish
-  step rather than relying on a manual review gate.
-- Treat replacing an existing date as an intentional revision and mention it
-  in the commit message.
+- Every theme must cite the immutable Chartbeat snapshot.
+- Keep source facts separate from interpretation and label the public artwork AI-generated.
+- The public color artwork must remain untouched for publishing; the Frame vellum is a separate, private derivative.
+- Never bake in a physical matte or border. Samsung applies `flexible_antique` at display time so the composition is not crop-to-fill.
+- Do not let a Frame or Telegram failure turn an already published edition into a failed publication.
