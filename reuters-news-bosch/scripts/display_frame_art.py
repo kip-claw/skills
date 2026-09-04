@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload and display one validated artwork, recording the exact Frame result."""
+"""Upload one validated artwork and queue its display if the Frame is asleep."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument("--matte", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--attempts", type=int, default=2)
+    parser.add_argument("--display-timeout", type=int, default=45)
     args = parser.parse_args()
     result: dict[str, object] = {"status": "failed", "host": args.host, "matte": args.matte}
     for attempt in range(1, args.attempts + 1):
@@ -33,14 +34,23 @@ def main() -> int:
         match = re.search(r"content_id:\s*([^\s]+)", upload.stdout)
         if upload.returncode == 0 and match:
             content_id = match.group(1)
-            display = run([args.frame_cli, "display", content_id, "--host", args.host,
-                           "--token-file", args.token_file, "--confirm-display"])
+            display = run([
+                "timeout", str(args.display_timeout), args.frame_cli, "display", content_id,
+                "--host", args.host, "--token-file", args.token_file, "--confirm-display",
+            ])
             if display.returncode == 0:
                 result.update({"status": "displayed", "contentId": content_id, "attempt": attempt})
                 args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
                 print(json.dumps(result))
                 return 0
             error = display.stderr.strip() or display.stdout.strip()
+            result.update({
+                "status": "uploaded-pending-display", "contentId": content_id,
+                "attempt": attempt, "error": error,
+            })
+            args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+            print(json.dumps(result))
+            return 0
         else:
             error = upload.stderr.strip() or upload.stdout.strip() or "upload returned no content ID"
         result.update({"attempt": attempt, "error": error})

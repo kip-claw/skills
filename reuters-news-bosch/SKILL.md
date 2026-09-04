@@ -1,12 +1,12 @@
 ---
 name: "reuters-news-bosch"
-description: "Add a post-publish, image-to-image vellum Frame stage using Samsung's flexible antique matte."
+description: "Publish a post-publish vellum Frame edition and defer display safely until the TV is reachable."
 tag: Work
 ---
 
 # Reuters News Bosch
 
-Generate a daily news allegory from Reuters Chartbeat's most-read stories, publish the full-color edition to kip.computer, and then automatically create and display a monochrome vellum interpretation on Ben's Samsung Frame. The public color edition and the private Frame edition are separate artifacts. The entire pipeline is deterministic apart from the two explicitly recorded image-generation calls.
+Generate a daily news allegory from Reuters Chartbeat's most-read stories, publish the full-color edition to kip.computer, and then automatically create a monochrome vellum interpretation for Ben's Samsung Frame. The public color edition and the private Frame edition are separate artifacts. The Frame display is opportunistic: when the television is asleep, retain the uploaded content ID and display it later without regenerating or uploading again.
 
 ## Generate
 
@@ -34,8 +34,9 @@ It writes each run to `{{HOME}}/.openclaw/workspace/tmp/reuters-news-bosch/<time
    {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art upload <frame-vellum.png> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --matte flexible_antique --confirm-upload
    {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art display <returned-content-id> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --confirm-display
    ```
-   If the `frame-art` console script is unavailable, invoke the same installed project with its documented Python module and explicit `PYTHONPATH={{HOME}}/Code/art.kip.computer/src`; do not rely on a workspace-relative command. Record the content ID, matte (`flexible_antique`), host, and display result in `frame-art.json` and the manifest.
-7. Send the usual Telegram notification after the publish and Frame attempt. Include the public URL and one concise Frame status: displayed (with content ID), or published but Frame skipped/failed. Retain the color image as the Telegram media.
+   If display times out or fails after a successful upload, write `uploaded-pending-display` with that content ID to `frame-art.json`, copy it to `{{HOME}}/.openclaw/state/frame-art-pending.json`, and finish successfully. Do not re-upload it.
+7. `{{HOME}}/bin/frame-art-pending-display.sh` is run by the `Frame pending-display retry` automation every five minutes. It attempts only `frame-art display` for the pending content ID; on success it clears the pending state, otherwise it keeps it for a later retry. This makes the image ready as soon as the TV is switched on without depending on the daily artwork run being active.
+8. Send the usual Telegram notification after the publish and Frame attempt. Include the public URL and one concise Frame status: displayed (with content ID), uploaded and waiting for the TV, or published but Frame skipped/failed. Retain the color image as the Telegram media.
 
 ## Implementation requirements
 
@@ -44,7 +45,7 @@ Update `{{HOME}}/bin/reuters-news-bosch-cron.sh` and add small testable helpers 
 - Preserve `IMAGE_PRIMARY_SIZE=3840x2160`, `IMAGE_DIRECT_SIZE=3840x2160`, current primary/fallback behavior, idempotency guard, publishing flow, and color provenance.
 - Implement the image-to-image vellum operation with the OpenAI Images edits API and multipart upload; do not use a text-only generation call, and do not place API keys in run artifacts, logs, command arguments, manifests, or Telegram.
 - The Frame stage starts only after site publication succeeds. Its failure is non-fatal to the already-live public edition: log and notify the failure, preserve all artifacts, and exit successfully with a clear `published; frame ... failed` status. A color-generation or public-publish failure remains fatal as today.
-- Add bounded retries for the vellum edit and the Frame upload/display. Do not retry a completed site publish. On retry, use the same `frame-vellum.png` if generation already validated; do not create an untracked alternate.
+- Add bounded retries for the vellum edit and upload. Bound a live display attempt with a timeout; after a successful upload, a display timeout is a deferred state, not an upload failure. Do not retry a completed site publish or re-upload a pending content ID.
 - Add tests using mocked HTTP and Frame client calls that verify: edit request includes the color source image and 3840×2160 request; vellum prompt is captured; non-4K vellum output is rejected; upload uses `flexible_antique`; display follows a successful upload; Frame failure does not change a successful publication outcome; no TV action happens when public publication fails.
 - Keep the daily run idempotent. A normal rerun after a fully published day skips as before; `BOSCH_FORCE_REPUBLISH=1` is the only permitted way to deliberately replace the date.
 

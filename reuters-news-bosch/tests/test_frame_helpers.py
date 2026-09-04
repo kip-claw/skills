@@ -64,5 +64,29 @@ def test_display_uses_flexible_matte_then_content_id(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.argv", ["display_frame_art.py", "--frame-cli", "/bin/frame-art", "--image", "art.png", "--host", "tv", "--token-file", "token", "--matte", "flexible_antique", "--output", str(output)])
     assert helper.main() == 0
     assert calls[0][calls[0].index("--matte") + 1] == "flexible_antique"
-    assert calls[1][2] == "MY_F1234"
+    assert calls[1][calls[1].index("display") + 1] == "MY_F1234"
     assert json.loads(output.read_text())["status"] == "displayed"
+
+
+def test_display_timeout_keeps_uploaded_content_pending(tmp_path, monkeypatch):
+    helper = load("display_frame_art")
+    output = tmp_path / "frame-art.json"
+    calls = []
+
+    class Result:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+    def fake_run(command):
+        calls.append(command)
+        if "upload" in command:
+            return Result(0, "Uploaded. content_id: MY_F1234")
+        return Result(124, stderr="timed out")
+
+    monkeypatch.setattr(helper, "run", fake_run)
+    monkeypatch.setattr("sys.argv", ["display_frame_art.py", "--frame-cli", "/bin/frame-art", "--image", "art.png", "--host", "tv", "--token-file", "token", "--matte", "flexible_antique", "--output", str(output)])
+    assert helper.main() == 0
+    recorded = json.loads(output.read_text())
+    assert recorded["status"] == "uploaded-pending-display"
+    assert recorded["contentId"] == "MY_F1234"
+    assert calls[1][0:2] == ["timeout", "45"]
