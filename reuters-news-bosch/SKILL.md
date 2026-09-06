@@ -31,12 +31,13 @@ It writes each run to `{{HOME}}/.openclaw/workspace/tmp/reuters-news-bosch/<time
 5. Validate `frame-vellum.png` with the existing image validator, requiring a readable, nonblank, exact native 3840×2160 16:9 PNG. Never crop, center-crop, pad, resize, or bake a matte into either artifact.
 6. Use the locally installed Frame client directly from its source environment, with the already paired TV and token:
    ```bash
-   {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art upload <frame-vellum.png> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --matte flexible_antique --confirm-upload
+   {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art upload <frame-vellum.png> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --matte shadowbox_warm --confirm-upload
    {{HOME}}/Code/art.kip.computer/.venv/bin/frame-art display <returned-content-id> --host 192.168.0.110 --token-file {{HOME}}/.openclaw/frame-art-token --confirm-display
    ```
    If display times out or fails after a successful upload, write `uploaded-pending-display` with that content ID to `frame-art.json`, copy it to `{{HOME}}/.openclaw/state/frame-art-pending.json`, and finish successfully. Do not re-upload it.
 7. `{{HOME}}/bin/frame-art-pending-display.sh` is run by the `Frame pending-display retry` automation every five minutes. It attempts only `frame-art display` for the pending content ID; on success it clears the pending state, otherwise it keeps it for a later retry. This makes the image ready as soon as the TV is switched on without depending on the daily artwork run being active.
-8. Send the usual Telegram notification after the publish and Frame attempt. Include the public URL and one concise Frame status: displayed (with content ID), uploaded and waiting for the TV, or published but Frame skipped/failed. Retain the color image as the Telegram media.
+8. `{{HOME}}/bin/reuters-news-bosch-frame-resume.sh` is the separate resumable post-publish path. It locates today's existing source image, generates Vellum only when it is missing, validates exact 3840×2160 dimensions, and uploads/displays it without regenerating or republishing the public color edition. If OpenAI returns HTTP 429, notify Ben immediately that it may reflect API credits, billing/quota, or a temporary rate limit.
+9. Send the usual Telegram notification after the publish and Frame attempt. Include the public URL and one concise Frame status: displayed (with content ID), uploaded and waiting for the TV, or published but Frame skipped/failed. Retain the color image as the Telegram media.
 
 ## Implementation requirements
 

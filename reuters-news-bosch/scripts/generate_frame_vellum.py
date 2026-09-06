@@ -62,7 +62,16 @@ def request_edit(source: Path, api_key: str) -> tuple[bytes, dict[str, object]]:
     try:
         with urlopen(request, timeout=600) as response:
             payload = json.load(response)
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:1000]
+        if exc.code == 429:
+            raise RuntimeError(
+                "OpenAI vellum edit request failed: HTTP 429. This may indicate "
+                "exhausted API credits, billing/quota limits, or a temporary rate limit. "
+                f"Provider response: {detail}"
+            ) from exc
+        raise RuntimeError(f"OpenAI vellum edit request failed: HTTP {exc.code}: {detail}") from exc
+    except (URLError, TimeoutError) as exc:
         raise RuntimeError(f"OpenAI vellum edit request failed: {exc}") from exc
     encoded = (payload.get("data") or [{}])[0].get("b64_json")
     if not encoded:
