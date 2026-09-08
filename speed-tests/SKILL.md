@@ -1,7 +1,6 @@
 ---
 name: speed-test
 description: Runs an internet speed test and logs the results for the public stats page.
-tag: Monitoring
 ---
 
 # Internet Speed Test
@@ -34,7 +33,7 @@ This file is the public data source used by kip-claw stats components.
 
 Report the results back to the user — download speed, upload speed, and ping.
 Commit and push the JSON change in`{{HOME}}/Code/kip-claw`.
-If the user asks how it compares to recent tests, read the last few rows from the sheet using `gog --no-input -a "$GOG_ACCOUNT" sheets` and summarize the trend.
+If the user asks how it compares to recent tests, read the last few rows with the Google Workspace MCP `read_sheet_values` tool (using `user_google_email: "kip@palewi.re"`) and summarize the trend. Do not use `gog` for this interactive query.
 
 ## Notes
 

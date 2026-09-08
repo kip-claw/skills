@@ -1,8 +1,7 @@
 ---
 name: homepage-charts
 description: Logs the graphics that reach the Reuters homepage to Ben's spreadsheet.
-tag: Work
-metadata: {"openclaw": {"emoji": "📊", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "📊"}}
 ---
 
 # Homepage Charts (Google Sheets)
@@ -19,24 +18,12 @@ Columns: `Date`, `Chart`, `Notes`
 - **Chart**: Brief description of the chart (e.g., `Oil prices this year`, `US Consumer Price Index month to month`). Capitalize the first letter of the chart title.
 - **Notes**: Optional additional context or notes (usually left blank)
 
-## Commands
+## Google Workspace MCP
 
-### Add a Homepage Chart Entry
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms 'List!A:C' \
-  --values-json '[["2026-04-17","Oil prices this year",""]]' \
-  --insert INSERT_ROWS
-```
-
-### Query Recent Entries
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms 'List!A1:C20' --json
-```
+Use the Google Workspace MCP for spreadsheet `1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read `List` with `read_sheet_values`, check for a same-date duplicate, append with `modify_sheet_values`, and read back the new row.
 
 ## Workflow Rules
-- When asking for approval, show the data row that will be inserted (date, chart, notes) rather than the full `gog` command.
+- When asking for approval, show the data row that will be inserted (date, chart, notes), not a tool call.
 
 - **Always confirm** before adding entries
 - **Date**: Use today's date (YYYY-MM-DD) unless Ben specifies otherwise
@@ -44,31 +31,7 @@ gog --no-input -a "$GOG_ACCOUNT" sheets get 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTu
 - **Notes**: Leave blank (`""`) unless Ben explicitly provides a note
 - **No duplicates**: Don't create duplicate entries for the same chart on the same date
 
-## Examples
-
-### Add a homepage chart (no notes)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms 'List!A:C' \
-  --values-json '[["2026-04-17","Strait of Hormuz transits",""]]' \
-  --insert INSERT_ROWS
-```
-
-### Add a homepage chart (with notes)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms 'List!A:C' \
-  --values-json '[["2026-04-17","Retail US gas prices","First LSEG shipping data chart"]]' \
-  --insert INSERT_ROWS
-```
-
-### Read recent entries
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms 'List!A1:C10' --json
-```
-
 ## Notes
 
 - Sheet ID: `1ZfPHAdOJiK8vsQXpdslHXERRHDukZA8WXTuSY9JMbms`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access.

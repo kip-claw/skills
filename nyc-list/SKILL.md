@@ -1,9 +1,7 @@
 ---
 name: nyc-list
-title: NYC List
 description: Tracks the New York City places Ben has visited.
-tag: Lists
-metadata: {"openclaw": {"emoji": "🗽", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "🗽"}}
 ---
 
 # NYC List Skill
@@ -32,33 +30,9 @@ When adding new entries:
 2. Sort the entire list alphabetically by the `name` column with `{{HOME}}/bin/nyc-list-sort.sh`
 3. The sheet should remain in alphabetical order at all times
 
-## Commands
+## Google Workspace MCP
 
-### Add a new place
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!A:G" \
-  --values-json '[["2nd Ave. Deli","162 E 33rd St, New York, NY 10016","Y","Y","N","N","Old school Jewish deli with the classic sandwiches and sides"]]' \
-  --insert INSERT_ROWS
-```
-
-### Query the list
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!A1:G20" --json
-```
-
-### Search by name or address
-
-Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filter results in your script.
-
-### Update a place's status
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets update 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!C10" \
-  --values-json '[["Y"]]' \
-  --input USER_ENTERED
-```
+Use the Google Workspace MCP for spreadsheet `1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read `List` with `read_sheet_values`, use `modify_sheet_values` for additions and status changes, and read back each changed row. For name/address searches, read a sufficiently large range and filter returned values.
 
 ### Sort the list
 
@@ -99,25 +73,11 @@ Confirm this NYC list entry and I'll add it:
 - notes: My neighborhood outpost of the famous pizza purveyor. Decent and reliably recommended for a slice nearby.
 ```
 
-### Add a new place (recommended, decent)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!A:G" \
-  --values-json '[["5ive Spice","363 3rd Ave, New York, NY 10016","Y","Y","N","N","Great vietnamese food, including pho"]]' \
-  --insert INSERT_ROWS
-```
-
-### Read the list
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ "List!A1:G30" --json
-```
-
 ## Notes
 
 - Sheet ID: `1GeVkWdyqKM7P8A0MGwWns3fOketRR5ThnubSEaIKJEQ`
 - Title: "Ben's NYC list"
 - Timezone: `America/New_York`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access.
 - The sheet has conditional formatting: Y = green, N = purple on is_decent column
 - The sheet has a basic filter applied and is sorted ascending by name

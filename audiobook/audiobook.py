@@ -76,6 +76,10 @@ class Document:
 
 
 def fetch(url: str, timeout: int, retries: int) -> bytes:
+    if url.startswith("file://"):
+        return Path(url[7:]).expanduser().read_bytes()
+    if not re.match(r"^https?://", url, re.I):
+        return Path(url).expanduser().read_bytes()
     import httpx
 
     # Some publishers (Reuters, NYT, etc.) hard-block bare scrapers. Send a
@@ -162,8 +166,18 @@ def extract_epub(raw: bytes, url: str) -> Document:
     return Document(title=title, author=author, sections=sections)
 
 
+def extract_plain_text(raw: bytes, url: str) -> Document:
+    text = raw.decode("utf-8", errors="replace")
+    lines = [line.strip() for line in text.splitlines() if line.strip() and line.strip() != "---"]
+    source = url[7:] if url.startswith("file://") else url
+    title = re.sub(r"[-_]+", " ", Path(source).stem).strip().title() or "Untitled"
+    return Document(title=title, author="", sections=_split_into_sections("\n\n".join(lines), title))
+
+
 def extract(raw: bytes, url: str, content_type: str | None = None) -> Document:
     lower = url.lower()
+    if (url.startswith("file://") or not re.match(r"^https?://", url, re.I)) and (lower.endswith(".md") or lower.endswith(".txt")):
+        return extract_plain_text(raw, url)
     if lower.endswith(".pdf") or (content_type and "pdf" in content_type):
         return extract_pdf(raw, url)
     if lower.endswith(".epub") or (content_type and "epub" in content_type):
@@ -506,8 +520,8 @@ def _xml_escape(s: str) -> str:
 # --------------------------------------------------------------------------- #
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    p = argparse.ArgumentParser(prog="audiobook", description="Generate an audiobook from a URL.")
-    p.add_argument("url", help="HTTP(S) URL to an article, PDF, or EPUB")
+    p = argparse.ArgumentParser(prog="audiobook", description="Generate an audiobook from a URL or local text file.")
+    p.add_argument("url", help="HTTP(S) URL, file:// URL, or local Markdown/text file")
     p.add_argument("--provider", choices=["openai", "elevenlabs", "piper", "kokoro"], default=None)
     p.add_argument("--voice", default=None)
     p.add_argument("--speed", type=float, default=None)

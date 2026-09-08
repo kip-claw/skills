@@ -1,9 +1,7 @@
 ---
 name: runs-log
-title: Running Log
 description: Records the date, distance, route, and reflections from Ben's runs.
-tag: Lists
-metadata: {"openclaw": {"emoji": "🏃", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "🏃"}}
 ---
 
 # Runs Log (Google Sheets)
@@ -21,21 +19,9 @@ Columns: `Date`, `Distance`, `Route`, `Reflections`
 - **Route**: Route description (e.g., `Central Park loop`, `Queensborough Bridge and back`)
 - **Reflections**: Personal notes about the run (feel, conditions, observations)
 
-## Commands
+## Google Workspace MCP
 
-### Add a Run
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA "Sheet1!A:D" \
-  --values-json '[["2026-04-15","5 mi","Central Park loop","Felt strong, saw the reservoir"]]' \
-  --insert INSERT_ROWS
-```
-
-### Query Runs
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA "Sheet1!A1:D20" --json
-```
+Use the Google Workspace MCP for spreadsheet `1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read `Sheet1` to check duplicates, append with `modify_sheet_values`, then read back the written row.
 
 ## Workflow Rules
 
@@ -46,24 +32,8 @@ gog --no-input -a "$GOG_ACCOUNT" sheets get 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPR
 - **Reflections**: Personal, terse notes about the run
 - **No duplicates**: Don't create duplicate entries for the same run
 
-## Examples
-
-### Add a run (5 miles, Central Park)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA "Sheet1!A:D" \
-  --values-json '[["2026-04-15","5 mi","Central Park loop","Felt strong, saw the reservoir"]]' \
-  --insert INSERT_ROWS
-```
-
-### Read recent runs
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA "Sheet1!A1:D10" --json
-```
-
 ## Notes
 
 - Sheet ID: `1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access.
 - Old Obsidian file archived: `{{HOME}}/obsidian-vault/Projects/Runs Log.md`

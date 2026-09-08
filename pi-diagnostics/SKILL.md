@@ -1,8 +1,7 @@
 ---
 name: pi-diagnostics
 description: Reports Raspberry Pi health, temperatures, disk usage, and cron job status.
-tag: Monitoring
-metadata: {"openclaw": {"emoji": "🖥️", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "🖥️"}}
 ---
 
 # Pi Diagnostics (Google Sheets)
@@ -39,31 +38,9 @@ Populated by `openclaw-config-snapshot.sh` (daily snapshot of `openclaw.json` + 
 | `openclaw-config-snapshot.sh` | Daily at 4:15am | OpenClaw Config tab + `kip-claw/src/lib/openclawConfig.json` |
 | `kip-cron-log.sh` | On every bin script exit | Cron Health tab |
 
-## Commands
+## Google Workspace MCP
 
-### Query latest Pi health readings
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI "Pi Health!A1:K10" --json
-```
-
-### Query recent cron health
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI "Cron Health!A1:E20" --json
-```
-
-### Query OpenClaw job statuses
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI "OpenClaw Jobs!A1:G20" --json
-```
-
-### Query OpenClaw config history
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI "OpenClaw Config!A1:I10" --json
-```
+For interactive diagnostics, use the Google Workspace MCP for spreadsheet `1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read the applicable `Pi Health`, `Cron Health`, `OpenClaw Jobs`, or `OpenClaw Config` range with `read_sheet_values`.
 
 ### Manually trigger a Pi health snapshot
 
@@ -87,7 +64,7 @@ bash {{HOME}}/bin/openclaw-config-snapshot.sh
 
 - Sheet ID: `1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI`
 - Tabs: `Pi Health`, `Cron Health`, `OpenClaw Jobs`, `OpenClaw Config`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access for interactive queries. Existing unattended collection scripts retain their independent `gog` implementation because MCP tools require an authenticated agent session.
 - kip-claw JSON mirrors: `src/lib/piHealth.json`, `src/lib/openclawJobs.json`, `src/lib/openclawConfig.json`
 - GPU temp requires `vcgencmd` (available on Raspberry Pi OS); will be empty on non-Pi hardware
 - Cron Health rows are appended by `kip-cron-log.sh`, which is called via exit traps in: `kip-backup`, `kip-batocera-backup`, `kip-speedtest`, `kip-pi-health`, `kip-openclaw-jobs`, `kip-openclaw-config`

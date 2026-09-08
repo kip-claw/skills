@@ -109,6 +109,13 @@ the Pi (CPU only, ~1×realtime on a Pi 4).
 | PDF URL or `file://*.pdf` | `pypdf` |
 | EPUB URL or `file://*.epub` | `ebooklib` + `BeautifulSoup` |
 | Plain text URL | passthrough |
+| Local Markdown/text file or `file://` URL | built-in plain-text extractor |
+
+Local vault notes can be narrated directly:
+
+```bash
+{{HOME}}/bin/article-audiobook-render.sh "{{HOME}}/obsidian-vault/path/to/note.md" --format mp3
+```
 
 ## Logs
 

@@ -1,7 +1,6 @@
 ---
 name: "morning-message"
 description: "Writes Ben's daily Reuters News Apps morning message."
-tag: Work
 metadata:
   openclaw:
     emoji: "🌅"
@@ -51,9 +50,7 @@ Generates Ben's daily good-morning message for the Reuters News Applications Des
 
 5. **Run line** (optional) — If Ben ran that morning, add a line describing
    the distance and route. Check the runs log for today's date:
-   ```bash
-   gog --no-input -a "$GOG_ACCOUNT" sheets get 1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA "Sheet1!A1:D5" --json
-   ```
+   Use the Google Workspace MCP `read_sheet_values` on the Runs Log spreadsheet (`1ybViNc3uJp9Be7Os5Cryu6E83VTxB0ZqWPRYYiQAMfA`), passing `user_google_email: "kip@palewi.re"`. Do not use `gog`.
    Use natural phrasing like "I ran 10k over the Queensborough Bridge and back."
    If no run is logged for today, omit this line entirely.
 

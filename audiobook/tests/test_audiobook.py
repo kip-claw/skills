@@ -81,6 +81,14 @@ def test_load_config_resolves_tilde(tmp_path, monkeypatch):
     assert "~" not in cfg["nested"]["x"]
 
 
+def test_local_markdown_source(tmp_path):
+    source = tmp_path / "My Note.md"
+    source.write_text("# A heading\n\nThis is readable source text.", encoding="utf-8")
+    doc = ab.extract(ab.fetch(str(source), 10, 1), str(source))
+    assert doc.title == "My Note"
+    assert "readable source text" in doc.text
+
+
 def test_dry_run_does_not_call_tts(monkeypatch, tmp_path, capsys):
     # Build a fake doc; patch fetch/extract; ensure render_chunks is never invoked.
     def fake_fetch(url, timeout, retries):

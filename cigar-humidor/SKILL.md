@@ -1,8 +1,7 @@
 ---
 name: "cigar-humidor"
 description: "Add a current-aging summary workflow for every logged cigar."
-tag: Lists
-metadata: {"openclaw": {"emoji": "🫘", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "🫘"}}
 ---
 
 # Cigar Humidor (Google Sheets)
@@ -24,21 +23,9 @@ Columns: `Date Changed`, `Pack Type`, `RH%`, `Pack Count`, `Notes`
 ### Tab 4: Smoked Cigars
 Columns: `Make`, `Model`, `Date`, `Notes`
 
-## Commands
+## Google Workspace MCP
 
-### Query cigars
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A1:H1000" --json
-```
-
-### Add a cigar
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8 "Cigars!A:H" \
-  --values-json '[["2026-04-15","Montecristo","No. 2","Maduro","Cuba","Torpedo","52","Classic Cuban"]]' \
-  --insert INSERT_ROWS
-```
+Use the Google Workspace MCP for spreadsheet `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read with `read_sheet_values`, make row changes with `modify_sheet_values`, and read back each changed row before confirming.
 
 ## Aging Summary
 
@@ -62,4 +49,4 @@ When Ben asks how long cigars have been aging:
 
 - Sheet ID: `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`
 - Tabs: `Cigars`, `Humidity Readings`, `Boveda Changes`, `Smoked Cigars`
-- Requires `gog` with Sheets API access.
+- Requires Google Workspace MCP Sheets access.

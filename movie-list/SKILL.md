@@ -1,8 +1,7 @@
 ---
 name: movie-list
 description: Tracks the films Ben has watched and the ones he wants to see.
-tag: Lists
-metadata: {"openclaw": {"emoji": "🎬", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "🎬"}}
 ---
 
 # Movie List Skill
@@ -27,39 +26,9 @@ Columns: Likely `Title` and possibly `Released` or other metadata (similar to re
 - **Title**: Movie title
 - Additional columns may exist but are not required
 
-## Commands
+## Google Workspace MCP
 
-### Add a watched movie
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Watched!A:F" \
-  --values-json '[["Blue Moon","2025","3/14/2026","Streaming","👍","Ethan Hawke talker set at Sardi\'s"]]' \
-  --insert INSERT_ROWS
-```
-
-### Add to wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Wishlist!A:B" \
-  --values-json '[["Title","Released"]]' \
-  --insert INSERT_ROWS
-```
-
-### Query Watched movies
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Watched!A1:F20" --json
-```
-
-### Query Wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Wishlist!A1:B20" --json
-```
-
-### Search by title or year
-
-Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filter results in your script.
+Use the Google Workspace MCP for spreadsheet `1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read `Watched` or `Wishlist` with `read_sheet_values`, append or update with `modify_sheet_values`, and read back every changed row. Search a sufficiently large range and filter the returned values by title or year.
 
 ## Workflow Rules
 
@@ -70,33 +39,9 @@ Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filt
 - **Notes**: Keep brief, like the existing entries (1-2 sentences max)
 - **Wishlist → Watched**: When Ben watches a wishlist movie, move it (don't duplicate)
 
-## Examples
-
-### Add watched movie (2025, streaming, liked)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Watched!A:F" \
-  --values-json '[["Blue Moon","2025","3/14/2026","Streaming","👍","Ethan Hawke talker set at Sardi\'s"]]' \
-  --insert INSERT_ROWS
-```
-
-### Add to wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Wishlist!A:B" \
-  --values-json '[["Dune 3","2026"]]' \
-  --insert INSERT_ROWS
-```
-
-### Read recent watched movies
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg "Watched!A1:F10" --json
-```
-
 ## Notes
 
 - Sheet ID: `1AmRHTmZ8i4NPGEDeLoTkanp3Zw3QmhW8lI6W9fFLJcg`
 - Title: "Ben's movie list"
 - Timezone: `America/New_York`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access.

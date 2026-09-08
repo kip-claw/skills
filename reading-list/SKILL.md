@@ -1,8 +1,7 @@
 ---
 name: reading-list
 description: Tracks the books Ben has finished and the ones he wants to read.
-tag: Lists
-metadata: {"openclaw": {"emoji": "📚", "requires": {"bins": ["gog"]}}}
+metadata: {"openclaw": {"emoji": "📚"}}
 ---
 
 # Reading List Skill
@@ -42,48 +41,9 @@ Columns: `Title`, `Author`
 ### Medium by year tab
 Pivot table summary. Do not edit directly — it auto-updates from Finished.
 
-## Commands
+## Google Workspace MCP
 
-### Add a finished book
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Finished!A:H" \
-  --values-json '[["Title","Author","2025","Audiobook","2003","104","2026-05-22","book-0104"]]' \
-  --insert INSERT_ROWS
-```
-
-### Get the next read order
-
-Read the `Finished!F2:F` range, find the maximum numeric value, and add `1`.
-
-```bash
-NEXT_READ_ORDER=$(
-  gog --no-input -a "$GOG_ACCOUNT" sheets get 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Finished!F2:F500" --json \
-    | node -e 'let s=""; process.stdin.on("data", d => s += d); process.stdin.on("end", () => { const rows = JSON.parse(s).values || []; const nums = rows.flat().map(v => Number(v)).filter(Number.isFinite); console.log((nums.length ? Math.max(...nums) : 0) + 1); });'
-)
-```
-
-### Build the book ID
-
-```bash
-BOOK_ID=$(printf "book-%04d\n" "$NEXT_READ_ORDER")
-```
-
-### Get the finished date
-
-Use the current date in Ben's timezone.
-
-```bash
-DATE_FINISHED=$(TZ=America/New_York date +%F)
-```
-
-### Add to wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Wishlist!A:B" \
-  --values-json '[["Title","Author"]]' \
-  --insert INSERT_ROWS
-```
+Use the Google Workspace MCP for spreadsheet `1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read target ranges with `read_sheet_values`, modify rows with `modify_sheet_values`, and read back every changed row. To create a finished-book row, read `Finished!F2:F500`, calculate the next numeric read order, and derive `Book ID` as `book-%04d`.
 
 ### Move from Wishlist to Finished
 
@@ -93,27 +53,9 @@ gog --no-input -a "$GOG_ACCOUNT" sheets append 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvh
 4. Append or update the `Book Metadata` row for that `Book ID`, recording `Metadata Source`, `Metadata Checked`, `Metadata Confidence`, and `Metadata Notes`
 5. Optionally delete from Wishlist (requires manual confirmation)
 
-### Query Finished books
+### Query and search
 
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Finished!A1:H50" --json
-```
-
-### Query Wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Wishlist!A1:B50" --json
-```
-
-### Query Book Metadata
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Book Metadata!A1:R50" --json
-```
-
-### Search by author or title
-
-Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filter results in your script.
+Read the relevant `Finished`, `Wishlist`, or `Book Metadata` range with `read_sheet_values`; for author/title searches, read a sufficiently large range and filter returned values.
 
 ## Workflow Rules
 
@@ -130,33 +72,9 @@ Use `gog --no-input -a "$GOG_ACCOUNT" sheets get` with a larger range, then filt
 - **Wishlist → Finished**: When Ben finishes a wishlist book, move it (don't duplicate)
 - **Never edit Medium by year** — it's a pivot summary
 
-## Examples
-
-### Add finished book (audiobook, 2026)
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Finished!A:H" \
-  --values-json '[["The Old Man and the Sea","Ernest Hemingway","2026","Audiobook","1952","104","2026-05-22","book-0104"]]' \
-  --insert INSERT_ROWS
-```
-
-### Add to wishlist
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets append 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Wishlist!A:B" \
-  --values-json '[["Unequal","Eugenia Chang"]]' \
-  --insert INSERT_ROWS
-```
-
-### Read recent finished books
-
-```bash
-gog --no-input -a "$GOG_ACCOUNT" sheets get 1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI "Finished!A1:H20" --json
-```
-
 ## Notes
 
 - Sheet ID: `1iLziNbQPM_wP162YA8FcqhHhXCkFcCvhpTNa67WGywI`
 - Title: "Ben's book list"
 - Timezone: `America/New_York`
-- Requires `gog` with Sheets API access (service-level account context is preconfigured)
+- Requires Google Workspace MCP Sheets access.
