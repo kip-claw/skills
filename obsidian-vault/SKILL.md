@@ -123,7 +123,9 @@ Life-area sections:
 Inside `## Work`, keep:
 
 - `### High Priority` for today's focus
-- `### Medium Priority` for active but secondary work
+- `### Low Priority` for active but non-urgent work
+
+Ben's current Todo preference is a two-tier worklist: do not create a `### Medium Priority` section unless he explicitly requests it. When redistributing existing Medium items, move each one to High or Low and remove the Medium heading.
 
 Global Todo convention:
 
@@ -153,7 +155,11 @@ When Ben says something is done or asks to check it off:
 
 Do not write to `Archive/Done-Items.md` from this skill unless Ben explicitly asks to archive/sweep completed items after a digest.
 
-When work is no longer urgent, move it back to `### Medium Priority`.
+When work is no longer urgent, move it to `### Low Priority`.
+
+## Todo dashboard workflow
+
+The pinned Todo dashboard is a display-only snapshot of `{{HOME}}/obsidian-vault/Todo.md`; its bullets are not write-through controls. After any Todo edit, update the stable dashboard widget so it matches the note. The dashboard's Refresh button sends a chat request to rebuild the snapshot from the current Todo file.
 
 ## Ideas rules
 

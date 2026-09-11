@@ -26,7 +26,7 @@ if [[ -f "$KIP_HOME/.openclaw/.env" ]]; then
 fi
 
 SKILL_DIR="$KIP_HOME/.openclaw/workspace/skills/audiobook"
-PYTHON_BIN="$SKILL_DIR/.venv/bin/python"
+PYTHON_BIN="$KIP_HOME/.openclaw/venvs/audiobook/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="python3"
 fi
