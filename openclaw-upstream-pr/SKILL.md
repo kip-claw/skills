@@ -14,26 +14,20 @@ Workflow for creating and submitting pull requests to the `openclaw/openclaw` Gi
 
 - GitHub CLI (`gh`) installed and authenticated as `kip-claw` (verify with `gh auth status`)
 - SSH key at `~/.ssh/id_ed25519` configured for GitHub
-- Crabbox CLI (`crabbox`) installed with Cloudflare provider configured
-- Env vars `CRABBOX_CLOUDFLARE_RUNNER_URL` and `CRABBOX_CLOUDFLARE_RUNNER_TOKEN` in `~/.openclaw/.env`
-
-```bash
-# gh is already authenticated system-wide — no need to export GH_TOKEN.
-# Source the env only for Crabbox credentials:
-source ~/.openclaw/.env && export CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
-```
-
-**CRITICAL env note:** values in `~/.openclaw/.env` are not auto-loaded into random interactive shells. Before any Crabbox command in a fresh terminal/session, run the `source ~/.openclaw/.env` line above (or explicitly pass `CRABBOX_CLOUDFLARE_RUNNER_URL`/`CRABBOX_CLOUDFLARE_RUNNER_TOKEN`). If you skip this, Crabbox may appear "not configured" even though the values exist in the file.
+- ~150G+ free on the real disk under `~/Code` (check with `df -h ~/Code`) — a full `pnpm install` needs real room
+- Crabbox CLI (`crabbox`) with Cloudflare provider configured — **optional now, fallback only** (see Step 5's "Build & Test Locally" below); env vars `CRABBOX_CLOUDFLARE_RUNNER_URL`/`CRABBOX_CLOUDFLARE_RUNNER_TOKEN` in `~/.openclaw/.env` if you do need it
 
 **Prefer `gh` over naked `git`/curl wherever an equivalent exists.** `gh` handles auth, fork-awareness, and API plumbing for you. Only fall back to raw `git` for operations `gh` doesn't cover (commit, push, rebase, local branching).
 
 ## Fork Setup
 
+> [!WARNING] **Clone under `~/Code`, never `/tmp`.** `/tmp` on this Pi is tmpfs (RAM-backed, ~3.9G total) — a full monorepo clone + `pnpm install` can fill it and start failing with `ENOSPC` on totally unrelated commands (even `git status`), including after a reboot silently wipes `/tmp` mid-session and takes your working tree with it. `~/Code` is the real disk (150G+ free) and survives reboots. Use a clearly-named scratch dir, e.g. `~/Code/openclaw-scratch/openclaw-src`, not something that collides with an unrelated existing `~/Code` project.
+
 The fork lives at `kip-claw/openclaw`. Use `gh repo clone` — it automatically sets the `upstream` remote to the parent repo for forks:
 
 ```bash
-gh repo clone kip-claw/openclaw /tmp/openclaw-patch
-cd /tmp/openclaw-patch
+gh repo clone kip-claw/openclaw ~/Code/openclaw-scratch/openclaw-src
+cd ~/Code/openclaw-scratch/openclaw-src
 # `upstream` remote is already configured by `gh repo clone` for forks. Verify:
 git remote -v   # should show origin=kip-claw/openclaw, upstream=openclaw/openclaw
 
@@ -43,7 +37,7 @@ git fetch upstream
 git checkout -b fix/descriptive-branch-name upstream/main
 ```
 
-The repo includes a `.crabbox.yaml` that configures Cloudflare remote builds (provider, instance class, setup steps, named jobs). No local `pnpm install` is needed — dependencies install on the remote container.
+For a quick single-branch checkout when you already know the branch name (e.g. resuming work after a reboot lost `/tmp`), `git clone --depth 1 --branch <branch> --single-branch https://github.com/kip-claw/openclaw.git <dir>` is faster than a full `gh repo clone`.
 
 ## Source Layout
 
@@ -66,7 +60,7 @@ Not every PR is a core `src/` fix. Bundled plugins live under `extensions/<name>
 
 **Plugin manifest contract (bites silently).** Every agent tool a plugin registers via `api.registerTool` **must** also be declared in that plugin's `extensions/<name>/openclaw.plugin.json` under `contracts.tools` (sorted array of tool names). If you add a tool in `index.ts`/`src/tool.ts` but forget the manifest, the plugin registry **rejects the registration at runtime** (`plugin must declare contracts.tools for: <name>`) and the `test:contracts:plugins` lane fails — but `test:extension <name>` does **not** catch it. This is exactly the kind of thing `codex review` flags and the per-extension test misses.
 
-**Validation commands for extension PRs** (run remotely on Crabbox — see git caveat in Step 5):
+**Validation commands for extension PRs** (run locally per Step 5):
 
 ```bash
 pnpm build
@@ -111,7 +105,7 @@ grep -n "RELEVANT_CONSTANT" /usr/lib/node_modules/openclaw/dist/*.js
 Then find the corresponding TypeScript source in the fork:
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 grep -rn "RELEVANT_CONSTANT" src/
 ```
 
@@ -139,7 +133,7 @@ sudo journalctl -u openclaw -f
 Apply the equivalent change in the fork's TypeScript source:
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 # Edit the relevant .ts files
 # Follow existing code patterns (naming, exports, config structure)
 ```
@@ -150,18 +144,39 @@ cd /tmp/openclaw-patch
 - Optional config fields use `property?: type` in interface definitions
 - Watchdog/timeout values should be configurable via `CronConfig` when possible
 
-### 5. Build & Test via Crabbox (Cloudflare)
+### 5. Build & Test Locally (default)
 
-Crabbox runs build and typecheck remotely on Cloudflare containers (standard-4: 4 vCPU, 12 GiB RAM). This satisfies the CONTRIBUTING.md requirement to "Run tests: `pnpm build && pnpm check`" before submitting. The `.crabbox.yaml` in the repo handles provider selection, dependency installation, and named jobs.
+**Local, in `~/Code`, is now the default path — not Crabbox.** As of 2026-09, this repo's working tree is ~640MB / 41,000+ files, which exceeds a hard payload-size limit on the personal Cloudflare-backed Crabbox runner (`413 Request Entity Too Large` on the very first sync — confirmed server-side, `--force-sync-large` does not help, and `--fresh-pr` — which would avoid the upload by fetching the PR directly on the remote side — is explicitly unsupported on the Cloudflare provider, `--provider aws` only). Crabbox may still work fine on a *smaller* repo or once this one shrinks; see "5b. Fallback" below if you want to try it, but don't spend much time on it before falling back to local.
 
-**Remote-first test policy (default):** run every test/validation that can run remotely on Crabbox, not on the Pi. Use local Pi execution only when the check requires local runtime state, credentials, or live channel integrations that cannot exist in an ephemeral Crabbox container.
+The good news: since cloning into `~/Code` (real disk, not tmpfs `/tmp`), a full `pnpm install --frozen-lockfile` is fast and reliable on this Pi — done in ~2 minutes, no Crabbox needed:
 
-**Important:** Crabbox can handle both build validation AND behavior proof generation. The `quick-check` job proves compilation + typecheck. The `proof` job builds the patched binary and runs targeted commands to produce real output for the PR body. For fixes that require runtime state (gateway running, cron jobs active), use local Pi production evidence instead.
+```bash
+cd ~/Code/openclaw-scratch/openclaw-src
+corepack enable   # harmless "EACCES" symlink warning is fine, ignore it
+pnpm install --frozen-lockfile
+```
+
+Then typecheck/build/test directly:
+
+```bash
+pnpm build                    # only if the PR touches something dist/-consuming
+node scripts/run-vitest.mjs <path/to/changed.test.ts> [another.test.ts]
+```
+
+Run only the vitest files relevant to your change (a full `pnpm test` run across the whole monorepo is slow) — the point is real, targeted execution, not exhaustive coverage. `node scripts/run-vitest.mjs` (not raw `pnpm exec vitest` or `node --import tsx`) is this repo's supported entrypoint; see [Execution gotchas in AGENTS.md](AGENTS.md).
+
+**One real proof run can find bugs hand-tracing misses.** On this PR's actual run, 128/131 passed first try; the one real failure was a test's own overly-strict exact-string assertion (the code was fine — `formatErrorMessage`'s existing cause-chaining appended more than the test expected) that hand-tracing the code never would have caught. Two other failures were transient timing flakes (file-marker waits under momentary host load) that passed clean on immediate rerun — don't assume every red run is your fault, but don't assume it isn't either; rerun once, then look at what's actually failing.
+
+If you also want a from-scratch (matches-CI) sanity check, `pnpm check:changed` or `pnpm changed:lanes --json` (see [Execution gotchas](AGENTS.md)) run the same lane classification CI uses, scoped to your diff.
+
+### 5b. Fallback: Build & Test via Crabbox (Cloudflare)
+
+Only reach for this if local execution genuinely isn't an option (e.g. this Pi itself is disk/CPU constrained and a *different* trusted machine isn't available). As of 2026-09 this repo's size means the very first sync attempt fails outright (see "Build & Test Locally" above) — don't burn much time here before falling back to local.
 
 #### Quick one-shot (build + typecheck)
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 crabbox job run quick-check
 ```
 
@@ -230,9 +245,52 @@ crabbox doctor --provider cloudflare
 - Containers are ephemeral; warm boxes persist only while leased
 - Full test suite (`pnpm test`) exceeds the timeout; use `test-changed` or run tests in upstream CI
 
-### 6. Generate Behavior Proof via Crabbox
+### 6. Generate Behavior Proof Locally (default)
 
-After `quick-check` passes, generate real behavior proof for the PR body. The `proof` job in `.crabbox.yaml` builds the patched binary and runs commands that demonstrate the fix works.
+After local install (Step 5) passes, generate real behavior proof for the PR body from the same local checkout — no Crabbox needed.
+
+**Prefer a real, already-written (or throwaway) vitest spec over a hand-run CLI command whenever the fix has any test coverage at all.** Real vitest output is the strongest, least-fabricatable proof: it exercises the actual changed code path (real spawned processes, real file I/O, real timers), not a hand-picked CLI invocation that might not even touch the changed lines.
+
+```bash
+cd ~/Code/openclaw-scratch/openclaw-src
+node scripts/run-vitest.mjs path/to/changed.test.ts another/related.test.ts 2>&1 | tee /tmp/vitest-proof.log
+```
+
+Copy the real pass/fail summary and relevant test names into the PR body's **Evidence** section — not a fabricated "PROOF START/END" block. If a test fails on the first run, don't assume it's your bug or a flake — read the assertion; it may be the test that's wrong (see the note in Step 5).
+
+**For fixes with no existing test to run**, write a throwaway `*.test.ts` that invokes the real tool/function against a seeded fixture and asserts/`console.log`s the output, run it once with vitest to capture real output, then delete it before committing — it must not land in the PR:
+
+```ts
+// extensions/<name>/src/_proof.test.ts  — TEMP, do NOT commit
+import { it } from "vitest";
+import { createWikiOpenItemsTool } from "./tool.js";
+// ...seed a temp fixture on disk...
+it("PROOF", async () => {
+  const tool = createWikiOpenItemsTool(config);
+  const out = await tool.execute("proof", {});
+  console.log(out.content[0].text);
+});
+```
+
+```bash
+node scripts/run-vitest.mjs extensions/<name>/src/_proof.test.ts
+rm extensions/<name>/src/_proof.test.ts   # before committing
+```
+
+**When you need CLI-level proof instead** (config resolution, a subcommand's actual output, a build artifact):
+
+| Fix type | Proof command examples |
+|----------|----------------------|
+| CLI behavior | `node openclaw.mjs <subcommand> --flag` (needs `pnpm build` first) |
+| Config resolution | `node -e "import('./dist/entry.js').then(...)"` (needs `pnpm build` first) |
+| Build artifact | `ls -la dist/<expected-file>` |
+| Error handling | `node openclaw.mjs <trigger-condition> 2>&1` (show graceful handling) |
+
+**When to use Pi *production* state instead of a scratch checkout** — same triggers as before, unrelated to Crabbox vs local: a running gateway with real plugins/channels connected, active cron jobs with historical state, real message delivery, network-dependent live-service checks, or **auth/credential resolution** (stored OAuth tokens, profile-store API keys — a fresh scratch checkout has none of these). For these, follow Step 3's local production-validation approach and paste redacted journal logs instead.
+
+### 6b. Fallback: Generate Behavior Proof via Crabbox
+
+Only relevant if you're using the Crabbox fallback from 5b. The `proof` job in `.crabbox.yaml` builds the patched binary and runs commands that demonstrate the fix works.
 
 #### Customize the proof job
 
@@ -267,7 +325,7 @@ Edit `.crabbox.yaml`'s `proof` job — replace the placeholder proof commands wi
 #### Run proof
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 crabbox job run proof
 ```
 
@@ -329,7 +387,7 @@ For these cases, follow Step 3's local validation approach and paste journal log
 `git` is still the right tool for local commits and pushing branches (no `gh` equivalent for these):
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 git add -A
 git commit -m "fix(cron): descriptive summary of the change
 
@@ -465,7 +523,7 @@ Run `codex review --base origin/main` locally to catch what CI's ClawSweeper wil
 - Be prepared to rebase if `upstream/main` moves ahead. Use `gh repo sync` to update the fork's default branch first, then rebase locally (rebase has no `gh` equivalent):
 
 ```bash
-cd /tmp/openclaw-patch
+cd ~/Code/openclaw-scratch/openclaw-src
 gh repo sync kip-claw/openclaw --source openclaw/openclaw
 git fetch upstream
 git rebase upstream/main
@@ -507,9 +565,12 @@ git push origin fix/branch-name --force-with-lease
 20. **Beware stray NUL bytes turning a file "binary."** A literal `\x00` (e.g. an intended separator that came through as NUL) makes git treat the source as binary — `git diff --numstat` shows `-  -`, `git diff` says "Binary files differ", `file` reports `data`, and the PR diff won't render. Detect with `python3 -c "d=open(p,'rb').read(); print([i for i,b in enumerate(d) if b==0])"`; fix by replacing the byte. Sanity-check `git diff --stat` doesn't show `Bin` for a text file before committing.
 21. **Split crabbox work into short commands.** Install / build / each test suite / proof as separate runs beats one long chain — dodges the ~15 min Worker wall-clock and transient stream drops (`stream ended before completion`, HTTP2 `PROTOCOL_ERROR`), which are just retryable flakes.
 22. **`crabbox stop` syntax:** `crabbox stop --provider cloudflare <cbx_id>` (provider flag first, id positional). `--id` is not a valid `stop` flag. Warm boxes also auto-release after the 30m idle timeout, so 24/7 leasing is never required.
+23. **Local is now the default, not Crabbox (2026-09).** This repo's working tree (~640MB, 41,000+ files) exceeds the Cloudflare-backed Crabbox runner's payload limit — the very first sync fails with `413 Request Entity Too Large`, confirmed server-side (`--force-sync-large` doesn't help). `--fresh-pr` (fetch the PR directly on the remote instead of uploading) is AWS-only, not supported on `--provider cloudflare`. Meanwhile a local `pnpm install --frozen-lockfile` in `~/Code` (not `/tmp`) completes in ~2 minutes and `node scripts/run-vitest.mjs <files>` runs the real suite directly — simpler and more reliable than fighting Crabbox's sync limit. Re-check whether Crabbox works again if this repo's size drops or the runner's limit changes; until then, don't spend more than one quick attempt on it before falling back to local.
+24. **Never clone/build this repo in `/tmp`.** It's tmpfs (~3.9G, RAM-backed) on this Pi. A full clone + `pnpm install` can fill it, after which even unrelated commands (`git status`, a plain `rm`) fail with `ENOSPC` until you free space. Worse, a Pi reboot silently wipes `/tmp` entirely mid-session, taking an in-progress working tree with it (uncommitted work is lost; anything already pushed to the fork is safe). Always use `~/Code/<descriptive-name>` — real disk, survives reboots, currently 150G+ free.
+25. **One real test run finds bugs hand-tracing can't.** After several rounds of a reviewer finding real correctness bugs in a best-effort helper purely by reading the code, running the actual new tests locally (once `~/Code` made that fast) immediately surfaced a bug hand-tracing missed: a test asserted an exact error-message string, but the codebase's existing `formatErrorMessage` cause-chaining convention appends more to the real message than expected. The fix was to the test's assertion, not the code — but the point stands: prefer running real tests over one more round of manual verification once local execution is actually available.
 
 ## Notes
 
 - The fork at `kip-claw/openclaw` should stay in sync with upstream between PRs
-- Clean up working directories after PRs are merged: `rm -rf /tmp/openclaw-patch`
+- Clean up scratch checkouts after PRs are merged: `rm -rf ~/Code/openclaw-scratch/openclaw-src` (never store these under `/tmp` — see Lesson 24)
 - The local patched runtime at `/usr/lib/node_modules/openclaw/dist/` will be overwritten on the next `npm update -g openclaw`
