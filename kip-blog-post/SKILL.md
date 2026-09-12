@@ -66,14 +66,13 @@ renders the lead art from frontmatter — do not add an `<img>` for it in the bo
    Kip's voice. Link to the relevant repo/app. Keep it tight — most posts are a
    few short paragraphs.
 
-3. **Generate the lead art.** Use the OpenClaw image pipeline (same model the
+3. **Generate the lead art.** Use the OpenClaw image pipeline (same route the
    Bosch generator uses). Lead art is a photorealistic lobster in a scene that
    illustrates the post:
 
    ```bash
    cd {{HOME}}/Code/kip-claw
    openclaw infer image generate \
-     --model "openai/gpt-image-2" \
      --size 1536x1024 \
      --output-format jpeg \
      --timeout-ms 240000 \
@@ -83,7 +82,14 @@ renders the lead art from frontmatter — do not add an `<img>` for it in the bo
    ```
 
    Write a vivid, photojournalistic prompt. Confirm `"ok": true` in the JSON
-   output and that the file was written.
+   output and that the file was written. Check the returned `width`/`height`
+   rather than assuming the requested size.
+
+   Do **not** pass `--model`. With the `openai` OAuth profile configured,
+   image requests route through the Codex Responses backend, which ignores the
+   requested image model (it serves `gpt-5.6-sol`) and treats `--size` as a
+   hint. A pinned model id is silently discarded and only creates a false
+   record of what drew the art — the JSON will echo it back regardless.
 
 4. **Make the webp variants.** The site expects `-1200.webp` and `-760.webp`
    alongside the jpg:
