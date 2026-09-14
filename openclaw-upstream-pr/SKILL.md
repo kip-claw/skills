@@ -15,7 +15,7 @@ Workflow for creating and submitting pull requests to the `openclaw/openclaw` Gi
 - GitHub CLI (`gh`) installed and authenticated as `kip-claw` (verify with `gh auth status`)
 - SSH key at `~/.ssh/id_ed25519` configured for GitHub
 - ~150G+ free on the real disk under `~/Code` (check with `df -h ~/Code`) — a full `pnpm install` needs real room
-- Crabbox CLI (`crabbox`) with Cloudflare provider configured — **optional now, fallback only** (see Step 5's "Build & Test Locally" below); env vars `CRABBOX_CLOUDFLARE_RUNNER_URL`/`CRABBOX_CLOUDFLARE_RUNNER_TOKEN` in `~/.openclaw/.env` if you do need it
+- Crabbox is **not available to this fork-only account** — it requires `openclaw` GitHub org membership, which `kip-claw` doesn't have (Lesson 26). Steps 5b/6b below are kept for reference in case org access is ever granted, but treat local (Step 5/6) as the only real path, and [[openclaw-node-runtime-proof]] (Step 6c) as the path for real-runtime proof beyond a harness.
 
 **Prefer `gh` over naked `git`/curl wherever an equivalent exists.** `gh` handles auth, fork-awareness, and API plumbing for you. Only fall back to raw `git` for operations `gh` doesn't cover (commit, push, rebase, local branching).
 
@@ -382,6 +382,19 @@ For these cases, follow Step 3's local validation approach and paste journal log
 
 **Lesson learned:** Crabbox is excellent as a remote CI (build + typecheck confirmation without local toolchain), but for fixes involving credential resolution (e.g. openai/openai-codex cross-provider auth), the proof MUST come from the Pi where real credentials exist. A fresh container cannot exercise auth paths that depend on stored OAuth tokens. Plan accordingly — use `quick-check` for build validation, then patch the local Pi runtime (`/usr/lib/node_modules/openclaw/dist/`) for behavior proof. Remember the dist files use **tabs** for indentation; Python `sed`/replace scripts must account for this.
 
+### 6c. When a reviewer wants real runtime proof, not a harness
+
+If ClawSweeper or a maintainer explicitly rejects a Vitest-based proof (Step 6)
+as not demonstrating "an actual OpenClaw runtime invocation" — a real Gateway
+process, real plugin registration, a real RPC call, not synthetic in-process
+function calls — reaching for Crabbox won't help: **Crabbox requires
+`openclaw` GitHub org membership**, which a fork-only contributor account
+(e.g. `kip-claw`) does not have, and login fails outright regardless of
+provider. See the [[openclaw-node-runtime-proof]] skill instead: it builds
+the exact same kind of proof (real build, real Gateway, real `tools.invoke`
+call) using an idle node you already own and can SSH into. This was
+successfully used to satisfy exactly this request on `openclaw/openclaw#105550`.
+
 ### 7. Commit and Push
 
 `git` is still the right tool for local commits and pushing branches (no `gh` equivalent for these):
@@ -509,7 +522,7 @@ gh pr diff --repo openclaw/openclaw <number>          # confirm what reviewers s
 `clawsweeper[bot]` is the primary automated review on every PR. It posts **one durable, marker-backed comment** per PR and **edits that same comment** on each re-review (no duplicate comments). Key behaviors observed:
 
 - **Its findings are high quality.** In this session it correctly caught a runtime-breaking manifest omission (P1) that all local checks missed, then on the next round found 3 more real defects (an opaque-id-instead-of-text bug, an `anyOf`-vs-flat-enum provider-compat issue, and filtered-vs-unfiltered count inconsistency) plus called out that a hand-written "proof" didn't match actual code behavior. **Verify each finding against the code, but assume it's right until proven otherwise** — don't argue, fix.
-- **It gates on real proof.** Status `📣 needs proof` / rating `🦪 silver shellfish` etc.; it explicitly blocks when the posted proof "does not demonstrate the registered tool through OpenClaw." A fabricated/idealized proof block will be caught and called out. Generate proof from an actual invocation (see the vitest-spec technique above).
+- **It gates on real proof.** Status `📣 needs proof` / rating `🦪 silver shellfish` etc.; it explicitly blocks when the posted proof "does not demonstrate the registered tool through OpenClaw." A fabricated/idealized proof block will be caught and called out. Generate proof from an actual invocation (see the vitest-spec technique above). If it specifically wants a real runtime invocation beyond a harness/vitest spec, see Step 6c / the [[openclaw-node-runtime-proof]] skill — not Crabbox.
 - **Re-trigger with `@clawsweeper re-review`** (PR author or write-access can request review-only). Post it as a normal issue comment:
   ```bash
   gh api repos/openclaw/openclaw/issues/<N>/comments -f body="@clawsweeper re-review"
@@ -568,6 +581,7 @@ git push origin fix/branch-name --force-with-lease
 23. **Local is now the default, not Crabbox (2026-09).** This repo's working tree (~640MB, 41,000+ files) exceeds the Cloudflare-backed Crabbox runner's payload limit — the very first sync fails with `413 Request Entity Too Large`, confirmed server-side (`--force-sync-large` doesn't help). `--fresh-pr` (fetch the PR directly on the remote instead of uploading) is AWS-only, not supported on `--provider cloudflare`. Meanwhile a local `pnpm install --frozen-lockfile` in `~/Code` (not `/tmp`) completes in ~2 minutes and `node scripts/run-vitest.mjs <files>` runs the real suite directly — simpler and more reliable than fighting Crabbox's sync limit. Re-check whether Crabbox works again if this repo's size drops or the runner's limit changes; until then, don't spend more than one quick attempt on it before falling back to local.
 24. **Never clone/build this repo in `/tmp`.** It's tmpfs (~3.9G, RAM-backed) on this Pi. A full clone + `pnpm install` can fill it, after which even unrelated commands (`git status`, a plain `rm`) fail with `ENOSPC` until you free space. Worse, a Pi reboot silently wipes `/tmp` entirely mid-session, taking an in-progress working tree with it (uncommitted work is lost; anything already pushed to the fork is safe). Always use `~/Code/<descriptive-name>` — real disk, survives reboots, currently 150G+ free.
 25. **One real test run finds bugs hand-tracing can't.** After several rounds of a reviewer finding real correctness bugs in a best-effort helper purely by reading the code, running the actual new tests locally (once `~/Code` made that fast) immediately surfaced a bug hand-tracing missed: a test asserted an exact error-message string, but the codebase's existing `formatErrorMessage` cause-chaining convention appends more to the real message than expected. The fix was to the test's assertion, not the code — but the point stands: prefer running real tests over one more round of manual verification once local execution is actually available.
+26. **Crabbox needs `openclaw` org membership — this fork account doesn't have it.** Attempting `crabbox login` (any provider) as `kip-claw` fails with `"GitHub user kip-claw is not an active member of openclaw."` This is a separate, more fundamental blocker than the Cloudflare 413/repo-size issue in Lesson 23 — it means Steps 5b/6b's Crabbox fallback is not actually available to an external contributor at all, on any provider, regardless of repo size. When a reviewer wants real runtime proof beyond a Vitest harness, use the [[openclaw-node-runtime-proof]] skill (an owned idle node) instead — see Step 6c.
 
 ## Notes
 
