@@ -152,6 +152,7 @@ When Ben says something is done or asks to check it off:
 4. Ensure no blank lines remain after moving items.
 5. Verify by reading the affected active section and `## Done`.
 6. Do not leave checked items in active sections.
+7. After any successful Todo.md change, automatically refresh the pinned Todo dashboard from the updated file before reporting completion. If the dashboard refresh fails, report the vault change and the refresh failure separately.
 
 Do not write to `Archive/Done-Items.md` from this skill unless Ben explicitly asks to archive/sweep completed items after a digest.
 
@@ -159,7 +160,7 @@ When work is no longer urgent, move it to `### Low Priority`.
 
 ## Todo dashboard workflow
 
-The pinned Todo dashboard is a display-only snapshot of `{{HOME}}/obsidian-vault/Todo.md`; its bullets are not write-through controls. After any Todo edit, update the stable dashboard widget so it matches the note. The dashboard's Refresh button sends a chat request to rebuild the snapshot from the current Todo file.
+The pinned Todo dashboard is a display-only snapshot of `{{HOME}}/obsidian-vault/Todo.md`; its bullets are not write-through controls. After every successful Todo edit—adding, moving, completing, reprioritizing, or other list change—automatically update the stable dashboard widget so it matches the note before reporting completion. The dashboard's Refresh button sends a chat request to rebuild the snapshot from the current Todo file.
 
 ## Ideas rules
 

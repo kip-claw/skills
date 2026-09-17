@@ -8,7 +8,7 @@
 
 set -uo pipefail
 
-REMOTE_URL="${WHISPER_REMOTE_URL:-http://100.125.75.72:8178/inference}"
+REMOTE_URL="${WHISPER_REMOTE_URL:-http://latitude:8178/inference}"
 \1REDACTED
 LOG_SCRIPT="{{HOME}}/bin/whisper-transcription-log.sh"
 MODEL="Whisper base.en Q5_0"
