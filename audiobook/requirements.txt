@@ -7,8 +7,8 @@ mutagen>=1.47
 # Optional extras — install only what your default provider needs:
 #   openai      pip install openai
 #   elevenlabs  pip install elevenlabs
-#   piper       apt install piper / from binary release; no Python dep
-#   kokoro      from upstream; no required Python dep
+#   speaches    no extra Python dep (uses httpx, already required above);
+#               needs the Speaches server running (see ENVIRONMENT.md)
 #   PDF input   pip install pypdf
 #   EPUB input  pip install ebooklib beautifulsoup4
 

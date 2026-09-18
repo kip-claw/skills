@@ -2,16 +2,17 @@
 # Usage: voice-transcription-runner.sh <input.ogg>
 # Outputs transcript to stdout, exits non-zero on failure.
 #
-# Telegram voice notes are transcribed by the authenticated whisper.cpp service
-# on Ben's Latitude over Tailscale. The Pi logs only service diagnostics: no
-# audio, filenames, or transcript text are retained in diagnostics.
+# Telegram voice notes are transcribed by the authenticated Speaches service
+# (faster-whisper) on Ben's Latitude over Tailscale. The Pi logs only service
+# diagnostics: no audio, filenames, or transcript text are retained in
+# diagnostics.
 
 set -uo pipefail
 
-REMOTE_URL="${WHISPER_REMOTE_URL:-http://latitude:8178/inference}"
+REMOTE_URL="${WHISPER_REMOTE_URL:-http://latitude:8200/v1/audio/transcriptions}"
 \1REDACTED
 LOG_SCRIPT="{{HOME}}/bin/whisper-transcription-log.sh"
-MODEL="Whisper base.en Q5_0"
+MODEL="Systran/faster-whisper-small.en (Speaches)"
 TMPDIR=$(mktemp -d)
 START_MS=$(date +%s%3N)
 AUDIO_SECONDS=0
@@ -39,11 +40,14 @@ if ! ffmpeg -loglevel error -i "$INPUT" -ar 16000 -ac 1 -c:a pcm_s16le "$WAV"; t
 fi
 AUDIO_SECONDS=$(ffprobe -v error -show_entries format=duration -of default=nk=1:nw=1 "$WAV" 2>/dev/null || echo 0)
 
+REQUEST_START_MS=$(date +%s%3N)
 HTTP_STATUS=$(curl --silent --show-error --output "$RESPONSE" --write-out '%{http_code}' --max-time 180 \
   -H "Authorization: Bearer $(cat "$TOKEN_FILE")" \
   -F "file=@${WAV};type=audio/wav" \
+  -F "model=Systran/faster-whisper-small.en" \
   "$REMOTE_URL")
 CURL_RC=$?
+PROCESSING_MS=$(( $(date +%s%3N) - REQUEST_START_MS ))
 if [ "$CURL_RC" -ne 0 ]; then
   STATUS=curl_error
   echo "Error: remote transcription request failed" >&2
@@ -61,8 +65,6 @@ if [ $? -ne 0 ]; then
   echo "Error: remote transcription service returned no transcript" >&2
   exit 1
 fi
-PROCESSING_MS=$(jq -er '.elapsedMs | numbers' "$RESPONSE" 2>/dev/null || echo 0)
-MODEL=$(jq -er '.model | strings | select(length > 0)' "$RESPONSE" 2>/dev/null || echo "$MODEL")
 OUTCOME=success
 STATUS=http_200
 printf '%s\n' "$TRANSCRIPT"

@@ -3,9 +3,8 @@ provider:
   default: openai
   fallbacks:
     - openai
-    - piper
+    - speaches
     - elevenlabs
-    - kokoro
 
 # --- Per-provider settings ----------------------------------------------------
 providers:
@@ -18,14 +17,15 @@ providers:
     model: eleven_turbo_v2_5
     voice: Rachel
     api_key_env: ELEVENLABS_API_KEY
-  piper:
-    # Offline. Recommended fallback on the Pi.
-    bin_env: PIPER_BIN          # e.g. /usr/local/bin/piper
-    voice_env: PIPER_VOICE      # e.g. {{HOME}}/.local/share/piper/en_US-amy-medium.onnx
-    sample_rate: 22050
-  kokoro:
-    bin_env: KOKORO_BIN
-    voice_env: KOKORO_VOICE
+  speaches:
+    # Self-hosted Kokoro TTS on Ben's Latitude over Tailscale. Offline,
+    # zero API cost — the fallback role Piper used to fill, moved off the Pi.
+    base_url: http://latitude:8200
+    base_url_env: SPEACHES_BASE_URL
+    token_file: ~/.config/openclaw-speaches/latitude-token
+    token_file_env: SPEACHES_TOKEN_FILE
+    model: speaches-ai/Kokoro-82M-v1.0-ONNX
+    voice: af_sky           # any of the 54 bundled Kokoro voices; see `curl http://latitude:8200/v1/models`
 
 # --- Voice + delivery defaults ------------------------------------------------
 voice: alloy

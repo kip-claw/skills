@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Convenience wrapper for the audiobook OpenClaw skill.
-# Sources ~/.openclaw/.env so provider API keys + PIPER_* paths are available,
-# then dispatches to the skill's Python entry point.
+# Sources ~/.openclaw/.env so provider API keys are available, then
+# dispatches to the skill's Python entry point.
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ export HOME="$KIP_HOME"
 if [[ -f "$KIP_HOME/.openclaw/.env" ]]; then
   # Load env vars from ~/.openclaw/.env WITHOUT overriding values already
   # present in the caller's environment, so per-invocation overrides like
-  # `PIPER_VOICE=... ~/bin/article-audiobook-render.sh ...` actually take effect.
+  # `SPEACHES_BASE_URL=... ~/bin/article-audiobook-render.sh ...` actually take effect.
   while IFS= read -r line; do
     # Skip blanks and comments
     [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue

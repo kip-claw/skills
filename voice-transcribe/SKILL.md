@@ -1,13 +1,13 @@
 ---
 name: voice-transcribe
 title: Voice Transcription
-description: Transcribes Telegram voice messages with a private whisper.cpp service on Ben's Latitude over Tailscale.
+description: Transcribes Telegram voice messages with a private Speaches (faster-whisper) service on Ben's Latitude over Tailscale.
 tag: Media
 ---
 
 # Voice Transcription
 
-Telegram voice messages are transcribed by a token-authenticated `whisper.cpp` service on Ben's Latitude. The Pi converts audio transiently and sends it only over Tailscale; it has no local Whisper fallback.
+Telegram voice messages are transcribed by a token-authenticated Speaches (faster-whisper) service on Ben's Latitude — the same self-hosted server that provides the `audiobook` skill's TTS. The Pi converts audio transiently and sends it only over Tailscale; it has no local Whisper fallback.
 
 When a voice message arrives:
 

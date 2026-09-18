@@ -305,7 +305,7 @@ def render_chunks(
     order: list[str] = [provider] + [p for p in fallbacks if p != provider]
 
     # Ask the primary provider for a fingerprint that uniquely identifies the
-    # actual narration model (e.g. for Piper the resolved voice file path).
+    # actual narration model (e.g. for Speaches the model + voice pair).
     # Falls back to the abstract voice name when the provider doesn't expose
     # one or can't be instantiated yet.
     voice_key = voice
@@ -522,7 +522,7 @@ def _xml_escape(s: str) -> str:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="audiobook", description="Generate an audiobook from a URL or local text file.")
     p.add_argument("url", help="HTTP(S) URL, file:// URL, or local Markdown/text file")
-    p.add_argument("--provider", choices=["openai", "elevenlabs", "piper", "kokoro"], default=None)
+    p.add_argument("--provider", choices=["openai", "elevenlabs", "speaches"], default=None)
     p.add_argument("--voice", default=None)
     p.add_argument("--speed", type=float, default=None)
     p.add_argument("--format", choices=["mp3", "m4a"], default=None)

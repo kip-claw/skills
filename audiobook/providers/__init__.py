@@ -12,8 +12,7 @@ class TTSProvider(Protocol):
 _REGISTRY: dict[str, str] = {
     "openai": "providers.openai_provider",
     "elevenlabs": "providers.elevenlabs_provider",
-    "piper": "providers.piper_provider",
-    "kokoro": "providers.kokoro_provider",
+    "speaches": "providers.speaches_provider",
 }
 
 

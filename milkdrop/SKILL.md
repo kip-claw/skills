@@ -2,7 +2,7 @@
 name: milkdrop
 description: Renders a MilkDrop visualization video from an audio file or link.
 tag: Media
-metadata: {"openclaw": {"emoji": "🌀", "requires": {"bins": ["node", "ffmpeg", "ffprobe", "yt-dlp"]}}}
+metadata: {"openclaw": {"emoji": "🌀", "requires": {"bins": ["ssh", "scp"]}}}
 ---
 
 # MilkDrop Visualizer
@@ -67,9 +67,17 @@ On success the script prints a single-line JSON summary to stdout, e.g.
 
 ## Notes
 
-- Remote URLs require `yt-dlp` (at `/usr/local/bin/yt-dlp`); local files only
-  need `ffmpeg`/`ffprobe`.
+- The actual render (headless Chromium + Butterchurn WebGL + ffmpeg) runs on
+  Ben's Latitude over Tailscale, not on the Pi — a real browser compositor
+  render is too heavy for Kip's ARM CPU. `milkdrop-render.sh` stages a local
+  input file to Latitude via `scp`, SSHes in to run the unmodified render
+  script there, then copies the resulting MP4 back and rewrites the JSON
+  summary's `path` to the local delivery path. A remote URL is passed through
+  and fetched directly on Latitude via `yt-dlp` instead of being staged.
+- This is transparent to callers: same command, same flags, same JSON
+  contract as before the move.
 - Output files accumulate in `~/.openclaw/media/outbound/`; old renders are safe
-  to clean up.
+  to clean up. Remote scratch files on Latitude are deleted automatically
+  after each run.
 - On failure the script exits non-zero and writes the error to stderr. Reply
   with a short, friendly note and the gist of the error.
