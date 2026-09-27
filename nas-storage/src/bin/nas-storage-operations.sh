@@ -31,7 +31,13 @@ case "$cmd" in
     rsync -avz -e "ssh $SSH_OPTS" "$1" "kip-nas:$NAS_MOUNT/${2:-}"
     ;;
   pull)
-    rsync -avz -e "ssh $SSH_OPTS" "kip-nas:$NAS_MOUNT/$1" "${2:-.}"
+    # A pull destination may be an unprivileged SSHFS mount. Preserve file
+    # contents and modes, but do not attempt source-owner/group changes.
+    pull_args=(-avz --no-owner --no-group)
+    if [ -n "${NAS_PULL_EXCLUDE:-}" ]; then
+      pull_args+=(--exclude="$NAS_PULL_EXCLUDE")
+    fi
+    rsync "${pull_args[@]}" -e "ssh $SSH_OPTS" "kip-nas:$NAS_MOUNT/$1" "${2:-.}"
     ;;
   health)
     ssh $SSH_OPTS kip-nas 'bash -s' <<'EOF'
