@@ -4,7 +4,7 @@
 set -euo pipefail
 
 export HOME="{{HOME}}"
-export PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH="{{HOME}}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
 
 CURRENT=$(openclaw --version 2>/dev/null | awk '{print $2}')
 LATEST=$(npm view openclaw version 2>/dev/null)
