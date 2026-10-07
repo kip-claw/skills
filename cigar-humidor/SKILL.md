@@ -1,21 +1,31 @@
 ---
 name: "cigar-humidor"
-description: "Add a current-aging summary workflow for every logged cigar."
+description: "Track cigar inventory and analyze hourly humidor readings from Home Assistant."
 metadata: {"openclaw": {"emoji": "🫘"}}
 ---
 
-# Cigar Humidor (Google Sheets)
+# Cigar Humidor (Google Sheets + Home Assistant)
 
-Manages Ben's cigar humidor tracking in a single Google Sheet with four tabs:
-- **Cigar Log:** `https://docs.google.com/spreadsheets/d/1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8/edit`
+Manages Ben's cigar inventory and Boveda records in the **Cigar Log** Google
+spreadsheet. Find it by title with the Google Workspace MCP rather than
+hard-coding its ID.
 
 ## Sheet Structure
 
 ### Tab 1: Cigars
 Columns: `Date Added`, `Maker`, `Model`, `Wrapper`, `Origin`, `Size`, `Gauge`, `Notes`
 
-### Tab 2: Humidity Readings
-Columns: `Date`, `Time`, `RH%`, `Temperature (°F)`, `Notes`
+### Legacy tab: Humidity Readings
+The `Humidity Readings` tab in **Cigar Log** is a historical manual log. Keep
+its existing rows, but do not append new readings there and do not use it as the
+source for the website chart.
+
+### Automatic humidity source: Humidor Sensor Log
+Home Assistant appends hourly Zooz ZSE44 readings to the **Humidor Sensor Log**
+spreadsheet, tab **Humidor Readings**. Find it by title with the Google
+Workspace MCP. Columns are `Timestamp`, `Humidity (%)`, `Temperature (°F)`, and
+`Sensor`. This is the canonical source for current readings, analysis, and the
+kip.computer chart.
 
 ### Tab 3: Boveda Changes
 Columns: `Date Changed`, `Pack Type`, `RH%`, `Pack Count`, `Notes`
@@ -25,7 +35,23 @@ Columns: `Make`, `Model`, `Date`, `Notes`
 
 ## Google Workspace MCP
 
-Use the Google Workspace MCP for spreadsheet `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`. Always pass `user_google_email: "kip@palewi.re"`; do not use `gog`. Read with `read_sheet_values`, make row changes with `modify_sheet_values`, and read back each changed row before confirming.
+Use the Google Workspace MCP and the connected Google account. Resolve workbook
+IDs by exact title with `list_spreadsheets`; do not hard-code IDs. For
+interactive work, use `read_sheet_values` and `modify_sheet_values`, and read
+back each changed row before confirming. The unattended website exporter uses
+`gog` with IDs stored in the local OpenClaw environment file; never expose
+those IDs in public skill source.
+
+## Humidity readings
+
+- For current conditions or analysis, read **Humidor Sensor Log → Humidor
+  Readings**. Each row has a local timestamp, RH, temperature, and sensor name.
+- The workbook grows by one row per hour. For long histories, read bounded row
+  ranges in chunks of at most 1,000 rows until no more rows are returned.
+- Do not write readings to the retired manual `Cigar Log → Humidity Readings`
+  tab. Preserve its historical entries unchanged.
+- The website exporter uses the automatic sensor workbook for
+  `humidityReadings`; the manual tab is no longer included in the chart feed.
 
 ## Aging Summary
 
@@ -47,6 +73,7 @@ When Ben asks how long cigars have been aging:
 
 ## Notes
 
-- Sheet ID: `1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8`
-- Tabs: `Cigars`, `Humidity Readings`, `Boveda Changes`, `Smoked Cigars`
+- Cigar workbook tabs: `Cigars`, legacy `Humidity Readings`, `Boveda Changes`,
+  and `Smoked Cigars`.
+- Sensor workbook: `Humidor Sensor Log` → `Humidor Readings`.
 - Requires Google Workspace MCP Sheets access.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Snapshot humidor Google Sheet data to kip-claw JSON.
+# Snapshot cigar inventory and Home Assistant humidor sensor data to kip-claw JSON.
 set -euo pipefail
 
 SCRIPT_START=$(date +%s)
@@ -14,8 +14,9 @@ export XDG_CONFIG_HOME="{{HOME}}/.config"
 export PATH="/usr/local/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 
-GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
-HUMIDOR_SHEET_ID="1DqN2jOsFA7n6uwJnnDXV_dmlhIGCP39Pdxr8hZxwgK8"
+GOG_ACCOUNT="${GOG_ACCOUNT:?Missing GOG_ACCOUNT in {{HOME}}/.openclaw/.env}"
+CIGAR_LOG_SHEET_ID="${HUMIDOR_CIGAR_LOG_SHEET_ID:?Missing HUMIDOR_CIGAR_LOG_SHEET_ID in {{HOME}}/.openclaw/.env}"
+HUMIDOR_SENSOR_SHEET_ID="${HUMIDOR_SENSOR_SHEET_ID:?Missing HUMIDOR_SENSOR_SHEET_ID in {{HOME}}/.openclaw/.env}"
 KIP_CLAW_REPO="{{HOME}}/Code/kip-claw"
 KIP_CLAW_JSON="$KIP_CLAW_REPO/static/data/humidor.json"
 PRETTIER="$KIP_CLAW_REPO/node_modules/.bin/prettier"
@@ -25,14 +26,19 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 echo "[$TIMESTAMP] Exporting humidor data..." >> "$LOG"
 
 # Preflight check for Sheets access
-if ! timeout 25s gog --no-input -a "$GOG_ACCOUNT" sheets get "$HUMIDOR_SHEET_ID" "Cigars!A1:A1" --json --results-only >/dev/null 2>&1 </dev/null; then
-  echo "[$TIMESTAMP] Failed Sheets preflight for gog account '$GOG_ACCOUNT'" >> "$LOG"
+if ! timeout 25s gog --no-input -a "$GOG_ACCOUNT" sheets get "$CIGAR_LOG_SHEET_ID" "Cigars!A1:A1" --json --results-only >/dev/null 2>&1 </dev/null; then
+  echo "[$TIMESTAMP] Failed Cigar Log Sheets preflight" >> "$LOG"
+  exit 1
+fi
+if ! timeout 25s gog --no-input -a "$GOG_ACCOUNT" sheets get "$HUMIDOR_SENSOR_SHEET_ID" "Humidor Readings!A1:D1" --json --results-only >/dev/null 2>&1 </dev/null; then
+  echo "[$TIMESTAMP] Failed Humidor Sensor Log Sheets preflight" >> "$LOG"
   exit 1
 fi
 
 timeout 180s python3 {{HOME}}/bin/humidor-data-export-core.py \
   "$KIP_CLAW_JSON" \
-  "$HUMIDOR_SHEET_ID" \
+  "$CIGAR_LOG_SHEET_ID" \
+  "$HUMIDOR_SENSOR_SHEET_ID" \
   "$GOG_ACCOUNT" </dev/null >> "$LOG" 2>&1
 
 if [ $? -ne 0 ]; then
