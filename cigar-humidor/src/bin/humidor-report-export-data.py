@@ -2,9 +2,12 @@
 """Snapshot the humidor Google Sheet into a single JSON file for kip-claw."""
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
+
+LOOSE_ISO_HOUR = re.compile(r"^(\d{4}-\d{2}-\d{2}[ T])(\d)(?=:)")
 
 
 def gog_read(account: str, sheet_id: str, tab_range: str) -> list[list[str]]:
@@ -42,7 +45,10 @@ def sensor_rows_to_dicts(rows: list[list[str]]) -> list[dict]:
         if not timestamp or not rh:
             continue
 
-        parsed = datetime.fromisoformat(timestamp.replace("T", " ", 1))
+        # Some source rows use an unpadded hour, e.g. "2026-10-08 0:00:00".
+        # Normalize that one looser ISO-8601 variant before strict parsing.
+        normalized_timestamp = LOOSE_ISO_HOUR.sub(r"\g<1>0\2", timestamp, count=1)
+        parsed = datetime.fromisoformat(normalized_timestamp.replace("T", " ", 1))
         readings.append(
             {
                 "date": parsed.date().isoformat(),
