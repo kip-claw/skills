@@ -25,7 +25,7 @@ fi
 
 REMOTE_HOST="${MILKDROP_REMOTE_HOST:-kip-latitude}"
 REMOTE_DIR="${MILKDROP_REMOTE_DIR:-/home/palewire/milkdrop}"
-REMOTE_PATH="/home/palewire/.nvm/versions/node/v24.21.0/bin:/home/palewire/.local/bin:/usr/local/bin:/usr/bin:/bin"
+REMOTE_PATH="/home/palewire/.nvm/versions/node/v24.22.1/bin:/home/palewire/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
 # Split out --input / --output; pass everything else straight through
 # unchanged (--duration, --start, --width, --height, --fps, --preset, --help,
