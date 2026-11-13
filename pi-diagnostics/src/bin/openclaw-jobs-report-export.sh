@@ -8,7 +8,7 @@ if [ -n "${GOG_KEYRING_PASSWORD:-}" ]; then
 fi
 export HOME="{{HOME}}"
 export XDG_CONFIG_HOME="{{HOME}}/.config"
-export PATH="{{HOME}}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH="/usr/local/bin:/usr/bin:/bin"
 export GIT_TERMINAL_PROMPT=0
 GOG_ACCOUNT="${GOG_ACCOUNT:-kip@palewi.re}"
 DIAG_SHEET_ID="1xIMil5RtrnrHwRORIaV9wMJQPsvXDlDdyfVBiNmhBhI"
